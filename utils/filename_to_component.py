@@ -1,5 +1,5 @@
 import glob
-import locations
+from . import locations
 import os
 
 filename_dictionary = None
