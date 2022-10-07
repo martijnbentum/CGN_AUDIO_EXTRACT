@@ -1,8 +1,7 @@
-import filename_to_component
+from . import filename_to_component
 import glob
-import locations
+from . import locations
 import os
-import textgrids
 
 
 def isfile(filename):
@@ -67,10 +66,6 @@ def handle_original_cgn_awd_file(filename, force = False):
     to_utf8(filename)
     return filename
 
-def load_local_awd_file_as_textgrid(filename):
-    f = exists_locally(filename,locations.local_awd)
-    if not f: f= handle_original_cgn_awd_file(filename)
-    return textgrids.TextGrid(f)
 
 def handle_all_dutch_awd_files():
     error = []
