@@ -30,13 +30,19 @@ def make_filename_to_component_dictionary(filename_list = None):
     l = filename_list
     return {x.split('/')[-1].split('.')[0]:x.split('/')[0] for x in l}
     
-def filename_to_component(filename):
+def filename_to_component_name(filename):
     global filename_dictionary
     if filename_dictionary == None: 
         d = make_filename_to_component_dictionary()
         filename_dictionary = d
-    stem = filename.split('.')[0]
+    stem = filename.split('/')[-1].split('.')[0]
     try: return filename_dictionary[stem]
     except KeyError:
         print(filename, 'is might not be part of cgn')
         raise ValueError(stem + 'not in filename dictionary')
+
+def filename_to_component(filename):
+    from text.models import Component
+    c = filename_to_component_name(filename)
+    try: return Component.objects.get(name = c)
+    except Component.DoesNotExist: raise ValueError(filename,c, 'not found')
