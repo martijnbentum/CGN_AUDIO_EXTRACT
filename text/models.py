@@ -39,7 +39,7 @@ class Speaker(models.Model):
             m += ' ' + str(self.age)
         return m
 
-class Textgrid(model.Model):
+class Textgrid(models.Model):
     dargs = {'on_delete':models.SET_NULL,'blank':True,'null':True}
     cgn_id = models.CharField(max_length=30,blank=True, default=None)
     awd_filename = models.CharField(max_length=300,blank=True, default= None)
