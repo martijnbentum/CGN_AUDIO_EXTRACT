@@ -41,14 +41,13 @@ def soxinfo_to_dict(soxinfo):
     return d
 
 def read_in_audio(filename, save = True):
-    from text.models import Audio, Component
+    from text.models import Audio
     cgn_id = filename.split('/')[-1].split('.')[0]
     try: return Audio.objects.get(cgn_id = cgn_id)
     except Audio.DoesNotExist: pass
     sox = sox_info(filename)
     d = soxinfo_to_dict(sox)
-    c= filename_to_component.filename_to_component(cgn_id)
-    d['component']= Component.objects.get(name = c)
+    d['component']= filename_to_component.filename_to_component(cgn_id)
     d['cgn_id'] = cgn_id
     a = Audio(**d)
     a.save()
