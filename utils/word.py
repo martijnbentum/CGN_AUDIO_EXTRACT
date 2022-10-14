@@ -81,4 +81,61 @@ def load_in_all_words_from_all_textgrids():
         print(i,tg)
         words.extend( textgrid_to_words(tg) )
     return words
+
+def words_to_duration(words):
+    return sum([word.duration for word in words])
+
+def _check_end_of_phrase(word,phrase,end_on_eos,maximum_duration):
+    '''checks whether phrase should end based on word status and
+    user specified criteria.
+    word exclusion: overlap or special word (i.e. a * or ggg code in the word)
+    user criterion: use end of sentence / use maximum phrase duration
+    adds the word to the phrase if the phrase does not end 
+    '''
+    to_long, end = False, False
+    if phrase: duration = word.end_time - phrase[0].start_time
+    else: duration = 0
+    if maximum_duration: to_long = duration > maximum_duration
+    ipa_missing = word.word_ipa_phoneme == ''
+    exclude_word =word.overlap or word.special_word or ipa_missing
+    if exclude_word: end = True
+    elif to_long: end = True
+    else: phrase.append(word)
+    if end_on_eos and word.eos: end = True
+    return end, duration, to_long, exclude_word
+
+def _add_phrase_to_phrases(phrase,phrases,minimum_duration):
+    '''whether to add the phrase to the phrases list based on minimum duration.
+    '''
+    if not phrase: return
+    phrase_duration = words_to_duration(phrase)
+    if minimum_duration: 
+        if phrase_duration >= minimum_duration:
+            phrases.append(phrase)
+    else: phrases.append(phrase)
+
+def words_to_phrases(words, end_on_eos = True, 
+    minimum_duration = None, maximum_duration = None):
+    '''split word list into phrases based on several criteria
+    see _check_end_of_phrase
+    end_on_eos          whether to end a phrase because of an end of sentence
+                        token
+    minimum_duration    whether to include a phrase (exclude if it is shorter
+                        than minimum_duration if none will not be used
+    maximum_duration    whether to end a phrase because it is longer than
+                        maximum_duration if none will not be used
+    '''
+    phrases, phrase = [], []
+    for i,word in enumerate(words):
+        end,duration,to_long, exclude_word = _check_end_of_phrase(
+            word,phrase,end_on_eos,maximum_duration)
+        if i == len(words) -1: end = True
+        if end:
+            _add_phrase_to_phrases(phrase,phrases,minimum_duration)
+            phrase = []
+            if to_long and not exclude_word: 
+                phrase.append(word)
+                duration = word.duration
+            to_long = False
+    return phrases
         
