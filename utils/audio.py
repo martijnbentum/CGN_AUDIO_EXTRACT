@@ -81,5 +81,9 @@ def read_in_all_audios(filename_list = None):
         
 
     
+def load_audio_fon_phrase(fon_phrase):
+    p = fon_phrase
+    return load_audio(p.textgrid.audio.filename,p.start_time, p.end_time)
+    
         
         
