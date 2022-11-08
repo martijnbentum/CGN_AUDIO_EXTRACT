@@ -9,3 +9,5 @@ cgn_speaker_file = cgn_dir + 'data/meta/text/speakers.txt'
 local_awd = '../awd/'
 local_fon= '../fon/'
 local_ort= '../ort/'
+
+cache_dir = '../WAV2VEC_DATA/'
