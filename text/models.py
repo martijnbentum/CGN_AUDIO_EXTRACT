@@ -158,6 +158,8 @@ class Fon_phrase(models.Model):
     @property
     def duration(self):
         return self.end_time - self.start_time
+
+    
     
 
 class Word(models.Model):
