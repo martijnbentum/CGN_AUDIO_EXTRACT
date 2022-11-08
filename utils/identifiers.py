@@ -47,6 +47,24 @@ def speaker_id_to_speaker(speaker_id):
 def cgn_id_to_speakers(cgn_id):
     from text.models import Textgrid, Speaker 
 
+def _make_component_to_fon_cgn_ids_dict():
+    from text.models import Textgrid
+    tg = Textgrid.objects.exclude(fon_filename = '')
+    d = {}
+    for x in tg:
+        if x.component.name not in d.keys():d[x.component.name] = []
+        d[x.component.name].append(x.cgn_id)
+    with open('../component_to_fon_cgn_ids_dict','w') as fout:
+        json.dump(d,fout) 
+    return d
+
+def component_to_fon_cgn_ids_dict():
+    if not os.path.isfile('../component_to_fon_cgn_ids_dict'): 
+        _make_component_to_fon_cgn_ids_dict()
+    with open('../component_to_fon_cgn_ids_dict') as fin:
+        d = json.load(fin)
+    return d
+
 def _make_component_to_cgn_ids_dict():
     from text.models import Component
     cgn_ids = load_cgn_ids()
