@@ -8,10 +8,8 @@ from typing import Any, Dict, List, Optional, Union
 import json
 
 cache_dir = '../WAV2VEC_DATA/'
+json_dir = cache_dir + 'JSONS/'
 
-
-def make_dialect_json_filename(dialect_name, cache_dir, split):
-    return cache_dir + dialect_name + '_' + split + '.json'
 
 def _load_audio(item):
     st, et = item['start_time'], item['end_time']
@@ -24,7 +22,7 @@ def _load_audio(item):
 def load_component(comp_name, cache_dir = cache_dir, load_audio=True):
     d = {}
     for split in 'train,dev,test'.split(','):
-        filename = make_dialect_json_filename(dialect_name,cache_dir,split)
+        filename = json_dir + comp_name + '_' + split + '.json'
         d[split] = load_dataset('json',data_files=filename,field='data',
             cache_dir = cache_dir)
         if load_audio:
