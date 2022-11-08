@@ -21,9 +21,9 @@ def speaker_textgrid_to_words(tg, speaker):
             continue
         except Word.DoesNotExist: pass
         d = {}
-        d['word'] = interval.text.strip('.?!')
-        d['word_phoneme'] = t[speaker.speaker_id +'_FON'][i].text
-        d['phonemes'] = str(get_phonemes(t,speaker,interval))
+        d['awd_word'] = interval.text.strip('.?!')
+        d['awd_word_phoneme'] = t[speaker.speaker_id +'_FON'][i].text
+        d['awd_phonemes'] = str(get_phonemes(t,speaker,interval))
         d['special_word'] = '*' in interval.text
         d['eos'] = '.' in interval.text or '?' in interval.text
         d['overlap'] = overlap
@@ -96,8 +96,8 @@ def _check_end_of_phrase(word,phrase,end_on_eos,maximum_duration):
     if phrase: duration = word.end_time - phrase[0].start_time
     else: duration = 0
     if maximum_duration: to_long = duration > maximum_duration
-    ipa_missing = word.word_ipa_phoneme == ''
-    exclude_word =word.overlap or word.special_word or ipa_missing
+    # ipa_missing = word.word_ipa_phoneme == ''
+    exclude_word =word.overlap or word.special_word #or ipa_missing
     if exclude_word: end = True
     elif to_long: end = True
     else: phrase.append(word)
