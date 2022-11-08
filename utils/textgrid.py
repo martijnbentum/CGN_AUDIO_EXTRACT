@@ -10,6 +10,24 @@ def get_awd_textgrid_filename(filename):
     f = handle_file.exists_locally(filename,locations.local_awd)
     if not f: f= handle_file.handle_original_cgn_awd_file(filename)
     return f
+
+def get_fon_textgrid_filename(filename):
+    '''
+    filename can be cgn_id e.g. fn00088
+    '''
+    f = handle_file.exists_locally(filename,locations.local_fon)
+    # if not f: f= handle_file.handle_original_cgn_fon_file(filename)
+    if not f: return ''
+    return f
+
+def get_ort_textgrid_filename(filename):
+    '''
+    filename can be cgn_id e.g. fn00088
+    '''
+    f = handle_file.exists_locally(filename,locations.local_ort)
+    # if not f: f= handle_file.handle_original_cgn_fon_file(filename)
+    if not f: return ''
+    return f
     
 def load_awd_textgrid(filename):
     f = get_awd_textgrid_filename(filename)
