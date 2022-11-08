@@ -45,9 +45,9 @@ def exists_locally(filename, local_dir):
     if fn: return fn[0]
     return False
 
-def make_cgn_path_filename(filename):
+def make_cgn_path_filename(filename, directory = locations.cgn_awd_dir):
     component = filename_to_component.filename_to_component(filename)
-    f = locations.cgn_awd_dir + 'comp-' + component
+    f = directory + 'comp-' + component.name
     f += '/nl/' + filename
     if os.path.isfile(f): return f
     fn = glob.glob(f + '*')
@@ -66,6 +66,32 @@ def handle_original_cgn_awd_file(filename, force = False):
     to_utf8(filename)
     return filename
 
+def handle_original_cgn_fon_file(filename, force = False):
+    output_filename = exists_locally(filename, locations.local_fon)
+    if output_filename and not force: return output_filename
+    if filename.startswith('fn'): 
+        filename = make_cgn_path_filename(filename, locations.cgn_fon_dir)
+    copy_file_to_local(filename, locations.local_fon)
+    filename = locations.local_fon + filename.split('/')[-1]
+    if filename.endswith('.gz'): 
+        unzip_file(filename)
+        filename = filename.rstrip('.gz')
+    to_utf8(filename)
+    return filename
+
+
+def handle_original_cgn_ort_file(filename, force = False):
+    output_filename = exists_locally(filename, locations.local_ort)
+    if output_filename and not force: return output_filename
+    if filename.startswith('fn'): 
+        filename = make_cgn_path_filename(filename, locations.cgn_ort_dir)
+    copy_file_to_local(filename, locations.local_ort)
+    filename = locations.local_ort + filename.split('/')[-1]
+    if filename.endswith('.gz'): 
+        unzip_file(filename)
+        filename = filename.rstrip('.gz')
+    to_utf8(filename)
+    return filename
 
 def handle_all_dutch_awd_files():
     error = []
@@ -75,4 +101,25 @@ def handle_all_dutch_awd_files():
             try: handle_original_cgn_awd_file(key)
             except:error.append(key)
     return error
+
+def handle_all_dutch_fon_files():
+    error = []
+    for key in filename_to_component.make_filename_to_component_dictionary():
+        if key.startswith('fn'):
+            print(key)
+            try: handle_original_cgn_fon_file(key)
+            except ValueError:error.append(key)
+    return error
+
+
+def handle_all_dutch_ort_files():
+    error = []
+    for key in filename_to_component.make_filename_to_component_dictionary():
+        if key.startswith('fn'):
+            print(key)
+            try: handle_original_cgn_ort_file(key)
+            except ValueError:error.append(key)
+    return error
+
+
     
