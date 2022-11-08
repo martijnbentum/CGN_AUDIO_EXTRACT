@@ -1,5 +1,5 @@
 from datasets import load_metric
-from .wav2vec2_data import cache_dir, load_dialect
+from .wav2vec2_data import cache_dir, load_component
 from .wav2vec2_data import DataCollatorCTCWithPadding 
 from transformers import Wav2Vec2CTCTokenizer
 from transformers import Wav2Vec2FeatureExtractor
@@ -15,8 +15,11 @@ import json
 processor = None
 wer_metric = load_metric('wer')
 
-def load_vocab():
-    fin = open(cache_dir+ 'vocab.json')
+def load_vocab(vocab_filename = None):
+    if not vocab_filename:
+        fin = open(cache_dir+ 'vocab.json')
+    else:
+        fin = open(vocab_filename)
     return json.load(fin)
 
 def load_tokenizer(vocab_dir = cache_dir,cache_dir = cache_dir):
@@ -62,9 +65,9 @@ def preprocess_datasets(datasets,maximum_length = None, sampling_rate = 16000):
                 input_columns=['input_length'])
     return d
 
-def preprocess_dialect(dialect_name):
+def preprocess_component(comp_name):
     processor = load_processor()
-    d = load_dialect(dialect_name)
+    d = load_component(comp_name)
     d = preprocess_datasets(d)
     return d
 
@@ -116,10 +119,10 @@ def load_training_arguments(experiment_name):
     training_args = TrainingArguments(
         output_dir=experiment_name,
         group_by_length=True,
-        per_device_train_batch_size=30,
+        per_device_train_batch_size=33,
         gradient_accumulation_steps=2,
         evaluation_strategy="steps",
-        num_train_epochs=30,
+        num_train_epochs=99,
         gradient_checkpointing=True,
         fp16=True,
         save_steps=300,
@@ -132,9 +135,9 @@ def load_training_arguments(experiment_name):
     )
     return training_args
 
-def load_trainer(dialect_name, experiment_name,model = None, training_args = None, 
+def load_trainer(comp_name, experiment_name,model = None, training_args = None, 
     datasets = None,train = 'train',evaluate='dev'):
-    experiment_name = dialect_name + '_' + experiment_name
+    experiment_name = comp_name + '_' + experiment_name
     print('set processor')
     processor = load_processor()
     print('make data collator')
@@ -147,7 +150,7 @@ def load_trainer(dialect_name, experiment_name,model = None, training_args = Non
         training_args = load_training_arguments(experiment_name)
     if not datasets:
         print('load datasets')
-        datasets= preprocess_dialect(dialect_name)
+        datasets= preprocess_component(comp_name)
     print('defining the trainer')
     trainer = Trainer(
         model=model,
@@ -160,7 +163,7 @@ def load_trainer(dialect_name, experiment_name,model = None, training_args = Non
     )
     return trainer
 
-def do_dialect_training(dialect_name,experiment_name):
-    trainer = load_trainer(dialect_name, experiment_name)
+def do_component_training(comp_name,experiment_name):
+    trainer = load_trainer(comp_name, experiment_name)
     trainer.train()
     return trainer
