@@ -44,12 +44,18 @@ class Sampa:
 
     diphthongs = 'E+,Y+,A+'.split(',')
     diphthongs_examples = 'w[ij]s,h[ui]s,k[ou]d'.split(',')
+    
+    simple_diphthongs = '3,4,5'.split(',')
 
     loan_vowels = 'E:,Y:,O:'.split(',')
     loan_vowels_examples = 'sc[è]ne,fr[eu]le,z[o]ne'.split(',')
 
+    simple_loan_vowels = 'E,Y,O'.split(',')
+
     nasal_vowels = 'E~,A~,O~,Y~'.split(',')
     nasal_vowels_examples = 'vacc[in],croiss[ant],c[on]gé,parf[um]'.split(',')
+
+    simple_nasal_vowels = 'E,A,O,Y'.split(',')
 
     consonants = plosives + fricatives + sonorants
     consonants_examples = []
@@ -58,6 +64,8 @@ class Sampa:
     consonants_examples.extend(sonorants_examples)
 
     vowels = shortvowels+longvowels+sjwa+diphthongs+loan_vowels+nasal_vowels
+    simple_vowels = shortvowels+longvowels+sjwa
+    simple_vowels += simple_diphthongs+simple_loan_vowels+simple_nasal_vowels
     vowels_examples = []
     vowels_examples.extend(shortvowels_examples)
     vowels_examples.extend(longvowels_examples)
@@ -67,11 +75,13 @@ class Sampa:
     vowels_examples.extend(nasal_vowels_examples)
 
     symbols = consonants + vowels
+    simple_symbols = consonants + simple_vowels
     examples = consonants_examples + vowels_examples
 
     consonants_to_examples = make_dict(consonants, consonants_examples)
     vowels_to_examples = make_dict(vowels, vowels_examples)
     symbols_to_examples = make_dict(symbols, examples)
+    simple_symbols_to_examples = make_dict(simple_symbols, examples)
     
     @property
     def to_ipa_dict(self):
@@ -100,6 +110,16 @@ class Sampa:
         return self._to_simple_ipa_dict
 
     @property
+    def to_simple_sampa_dict(self):
+        if hasattr(self,'_to_simple_sampa_dict'): 
+            return self._to_simple_sampa_dict
+        d = {}
+        for symbol, simple_symbol in zip(self.symbols, self.simple_symbols):
+            d[symbol] = simple_symbol
+        self._to_simple_sampa_dict = d
+        return self._to_simple_sampa_dict
+
+    @property
     def to_cv_dict(self):
         if hasattr(self,'_to_cv_dict'): return self._to_cv_dict
         d = {}
@@ -111,6 +131,9 @@ class Sampa:
         return self._to_cv_dict
     
             
+    @property
+    def to_simple_sample_dict(self):
+        pass
         
 
 class Ipa:
