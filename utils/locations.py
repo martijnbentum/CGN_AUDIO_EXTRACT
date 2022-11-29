@@ -10,4 +10,8 @@ local_awd = '../awd/'
 local_fon= '../fon/'
 local_ort= '../ort/'
 
+syllable_dir= '../SYLLABLE/'
+timestamps_dir='../O_PHONEMES_TIMESTAMPS/'
+
 cache_dir = '../WAV2VEC_DATA/'
+
