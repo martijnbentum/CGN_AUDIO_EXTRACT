@@ -2,6 +2,7 @@ import os
 import sys, os
 import torch
 import numpy as np
+import pickle
 from datasets import load_dataset
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, Wav2Vec2CTCTokenizer
 from transformers import Wav2Vec2Model
@@ -68,7 +69,7 @@ def audio_to_ctc_outputs(audio_filename, start=None, end=None, processor=None,
     return outputs
 
 def audio_to_pretrained_outputs(audio_filename, start=None, end=None, 
-    processor=None, model=None):
+    processor=None, model=None, frame_duration = None):
     if not processor or not model: 
         print('loading pretrained model: facebook/wav2vec2-xls-r-2b')
         processor, model = load_pretrained_processor_model()
@@ -79,11 +80,13 @@ def audio_to_pretrained_outputs(audio_filename, start=None, end=None,
     inputs = processor(array, sampling_rate=16_000, return_tensors='pt',
         padding= True)
     with torch.no_grad():
+        # outputs = model(**inputs.to('cuda'),output_hidden_states = True)
         outputs = model(**inputs,output_hidden_states = True)
     return outputs
 
 def cgn_id_to_hidden_states(cgn_id, processor, model, frame_duration = 0.02,
-    hidden_state_layers = [1,3,6,9,12,15,18,21,24], ctc = True):
+    hidden_state_layers = [1,3,6,9,12,15,18,21,24]):
+    ctc = 'Wav2Vec2ForCTC' in str(type(model))
     if ctc: 
         output_f = audio_to_ctc_outputs
         vocab= processor.tokenizer.get_vocab()
@@ -106,7 +109,20 @@ def cgn_id_to_hidden_states(cgn_id, processor, model, frame_duration = 0.02,
             cgn_id, vocab, hidden_state_layers, ctc)
         hs.add_phrase_hidden_states(phs)
         del phs
+        del outputs
     return hs
+
+def textgrid_to_pickle_hidden_states(textgrid,processor,model, name = '',
+    hidden_state_layers = None) :
+    d = {'cgn_id':textgrid.cgn_id,'processor':processor,'model':model}
+    if hidden_state_layers: d['hidden_state_layers'] = hidden_state_layers
+    hs = cgn_id_to_hidden_states(**d)
+    ctc = 'Wav2Vec2ForCTC' in str(type(model))
+    if ctc: directory = locations.ctc_hidden_states_dir
+    else: directory = locations.hidden_states_dir
+    if name: name = "_" + name
+    fout = open(directory + textgrid.cgn_id + name + '.pickle','wb')
+    pickle.dump(hs,fout)
 
 
 def textgrid_to_timestamp_file(textgrid, pipeline):
@@ -129,59 +145,3 @@ def textgrid_to_timestamp_file(textgrid, pipeline):
 
     
 
-def junk():
-    directory = '/vol/bigdata2/corpora2/CGN2/data/audio/wav/comp-o/nl'
-
-    MODEL_ID = "/vol/tensusers/lboves/huggingface_finetuned_with-mask/checkpoint-300"
-
-    processor = Wav2Vec2Processor.from_pretrained(MODEL_ID)
-    tokenizer = Wav2Vec2CTCTokenizer("/vol/tensusers/lboves/HuggingFace/cgn_vocab.json", 
-        unk_token="[UNK]", pad_token="[PAD]", word_delimiter_token="|")
-    print('tokenizer created')
-
-    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID)
-
-
-    phone_list = processor.tokenizer.get_vocab()
-    index2phone = {}
-    for key in phone_list:
-      index2phone[phone_list[key]] = key
-
-    all_phones=[]
-    for i in range(0, 38):
-      all_phones.append(index2phone[i])
-
-
-    maxnfiles = 500
-    nfiles = 0
-    nvectors = 0
-    for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
-        if os.path.isfile(f):
-            nfiles+=1
-            print(nvectors)
-        if (nfiles <= maxnfiles):
-            print(f)
-        speech_array, sampling_rate = librosa.load(f, sr=None, mono=False)
-        speech_array16 = speech_array
-        inputs = processor(speech_array16[0:16000*100], sampling_rate=16_000, 
-        return_tensors="pt", padding=True)                                                                                                      #
-        model_output = model(inputs.input_values, 
-            attention_mask=inputs.attention_mask, output_hidden_states=True)                                                                                                    #
-        logits = model_output.logits[-1,:,:].detach().numpy()
-        #model_output.hidden_states
-        #model_output.hidden_states[24].shape
-        #
-        for frameid in range(0, logits.shape[0]):
-            #s = np.argsort(-1*logits[frameid,:].detach().numpy())
-            s = np.argsort(-1*logits[frameid,:])
-            if ((phone_list["a"] == s[0]) & (logits[frameid, s[0]] > 4)):
-            #if (phone_list["a"] == s[0]):
-                nvectors+=1
-                M0+=1
-                tmp=model_output.hidden_states[24][-1,frameid,:].detach().numpy()
-                M1+=tmp
-                M2+=np.square(tmp)
-
-
-        np.save("Moments.npy", M0, M1, M2)
