@@ -130,6 +130,20 @@ class Sampa:
         self._to_cv_dict = d
         return self._to_cv_dict
     
+    @property
+    def simple_sampa_to_simple_ipa(self):
+        if hasattr(self,'_simple_sampa_to_simple_ipa_dict'): 
+            return self._simple_sampa_to_simple_ipa_dict
+        ipa = Ipa()
+        examples_to_symbols = reverse_dict(self.simple_symbols_to_examples)
+        ipa_examples_to_symbols = reverse_dict(ipa.simple_symbols_to_examples)
+        d = {}
+        for example, sampa_symbol in examples_to_symbols.items():
+            ipa_symbol = ipa_examples_to_symbols[example]
+            d[sampa_symbol] = ipa_symbol
+        self._simple_sampa_to_simple_ipa_dict= d
+        return self._simple_sampa_to_simple_ipa_dict
+
             
     @property
     def to_simple_sample_dict(self):
@@ -267,7 +281,33 @@ class Ipa:
         word.save()
 
 
+def convert_simple_sampa_vocab_to_ipa_symbols(simple_sampa_vocab):
+    sampa = Sampa()
+    d = sampa.simple_sampa_to_simple_ipa
+    nvocab = {}
+    for key, value in simple_sampa_vocab.items():
+        if key not in d.keys(): nvocab[key] = value
+        else: nvocab[ d[key] ] = value
+    return nvocab
+        
     
+def reorder_simple_ipa_vocab_to_phoneme_classes(simple_ipa_vocab):
+    ipa = Ipa()
+    out_vocab = {}
+    new_indices = []
+    symbols = []
+    for s in ipa.simple_symbols + [' ']:
+        if s not in symbols:symbols.append(s)
+    for i,symbol in enumerate(symbols):
+        for key, value in simple_ipa_vocab.items():
+            if symbol == key:
+                new_indices.append(value)
+                out_vocab[key] = i
+    return out_vocab, new_indices
+
+
+
+
 
     
     
