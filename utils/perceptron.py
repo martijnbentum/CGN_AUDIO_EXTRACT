@@ -2,6 +2,8 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 
+import glob
+import os
 import pickle
 from utils import locations
 
@@ -29,4 +31,34 @@ def train_classifiers(hidden_states, name = ''):
         with open(f, 'wb') as fout:
             pickle.dump(clf,fout)
 
+def show_scores():
+    fn = glob.glob(locations.perceptron_dir + 'score*')
+    for f in fn:
+        name = f.split('/')[-1]
+        print(name.ljust(35), round(float(open(f).read()),2))
+    
+def load_perceptron(layer = None, small = True, ctc = None, name = None):
+    if layer == None and small == False: layer = 19
+    elif layer == None and small == True: layer = 18
+    if ctc == None and small == False: ctc = False
+    if ctc == None and small == True: ctc = True
+    size = 'small' if small else 'big'
+    model_type = 'ctc' if ctc else 'pretrained'
+    if name == None:
+        filename = locations.perceptron_dir + 'clf_' + size + '_' + model_type
+        filename += '_' + str(layer)
+        fn = glob.glob(filename +'*.pickle')
+        print(filename,fn)
+        biggest = 0
+        for f in fn:
+            n_files = int(f.split('_')[-1].split('.')[0])
+            if n_files > biggest: name = f
+    if not name or not os.path.isfile(name):
+        print('could not find perceptron model with name:', name)
+        return
+    print('loading perceptron from file:',name)
+    with open(name, 'rb') as fin:
+        classifier = pickle.load(fin)
+    return classifier
 
+    
