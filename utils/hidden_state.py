@@ -59,7 +59,8 @@ class Hidden_states:
         X,y =[], []
         for x in self.layer_dict[layer]:
             X.append(x.vector)            
-            y.append(self.vocab[x.char])
+            if self.vocab:
+                y.append(self.vocab[x.char])
         return np.array(X), np.array(y)
 
     def _check_has_layer(self,layer):
@@ -70,8 +71,8 @@ class Hidden_states:
 
 
 class Phrase_hidden_states:
-    def __init__(self,outputs,indices, phrase_index, cgn_id, vocab=None,
-        hidden_state_layers = [1,6,12,18,14], extract_logit = True):
+    def __init__(self,outputs,indices, phrase_index=None, cgn_id=None, 
+        vocab=None,hidden_state_layers = [1,6,12,18,14], extract_logit = True):
         self.outputs = outputs
         self.nhidden_state_frames = self.outputs.hidden_states[0][0].shape[0]
         self.indices = indices
@@ -83,7 +84,9 @@ class Phrase_hidden_states:
             self.reverse_vocab = None
             self.extract_logit = False
         self.hidden_state_layers = hidden_state_layers
-        self.prelabeled_index_dict = tti.cgn_id_to_index_dict(cgn_id)
+        if cgn_id:
+            self.prelabeled_index_dict = tti.cgn_id_to_index_dict(cgn_id)
+        else: self.prelabeled_index_dict = {}
         self.extract_logit = extract_logit
         self.make_hidden_states()
 
@@ -100,8 +103,8 @@ class Phrase_hidden_states:
                 d['logit_char'] = self._extract_logit_char(phrase_frame_index)
             if label_index in self.prelabeled_index_dict.keys():
                 d['char'] = self.prelabeled_index_dict[label_index]
-            else: continue
-            if d['char'] == ' ' and random.randint(0,20) != 42: continue
+            elif self.prelabeled_index_dict: continue
+            else: d['char'] = ''
             self._extract_hidden_state_layers(d)
 
     def _extract_hidden_state_layers(self,d):
@@ -119,6 +122,7 @@ class Phrase_hidden_states:
 
 
     def _extract_logit_char(self,phrase_frame_index):
+        if not phrase_frame_index: return ''
         logit_frame =self.outputs.logits[0][phrase_frame_index].detach().numpy()
         i = np.argmax(logit_frame)
         return self.reverse_vocab[i]
@@ -143,8 +147,11 @@ class Hidden_state:
         self.phrase_index = phrase_index
 
     def __repr__(self):
-        m = self.char + ' '
-        m += self.cgn_id + ' '
+        if self.char:
+            m = self.char + ' '
+        else: m=''
+        if self.cgn_id:
+            m += self.cgn_id + ' '
         m += str(self.hidden_state_layer_index) 
         if self.logit_char:
             m += ' ' + self.logit_char
