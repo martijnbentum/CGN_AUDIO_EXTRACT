@@ -34,7 +34,8 @@ def load_pipeline(checkpoint, device = -1):
 def processor_to_reverse_vocab(processor):
     return {v:k for k,v in processor.tokenizer.get_vocab().items()}
 
-def checkpoint_to_processor_and_ctc_model(checkpoint):
+def checkpoint_to_processor_and_ctc_model(checkpoint = None):
+    if not checkpoint: checkpoint = default_checkpoint
     processor = Wav2Vec2Processor.from_pretrained(checkpoint)
     model =Wav2Vec2ForCTC.from_pretrained(checkpoint)
     return processor, model
@@ -144,4 +145,20 @@ def textgrid_to_timestamp_file(textgrid, pipeline):
     return output
 
     
+def audio_to_hidden_states(audio_filename, hidden_state_layers,
+        start = None, end = None, frame_duration = 0.02, processor=None, 
+        model = None):
+    if not processor or not model: 
+        processor, model = checkpoint_to_processor_and_ctc_model()
+    vocab= processor.tokenizer.get_vocab()
+    hs = hidden_state.Hidden_states()
+    outputs = audio_to_ctc_outputs(audio_filename,start,end,processor,
+        model=model,frame_duration=frame_duration)
+    nframes = outputs.hidden_states[0].shape[1]
+    indices = tti.start_end_time_to_indices(start,end,frame_duration)
+    print(outputs.hidden_states[1].shape, nframes, len(indices))
+    phs = hidden_state.Phrase_hidden_states(outputs, indices, vocab = vocab,
+         hidden_state_layers = hidden_state_layers)
+    hs.add_phrase_hidden_states(phs)
+    return hs
 
