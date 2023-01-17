@@ -46,7 +46,7 @@ def load_perceptron(layer = None, small = True, ctc = None, name = None):
     model_type = 'ctc' if ctc else 'pretrained'
     if name == None:
         filename = locations.perceptron_dir + 'clf_' + size + '_' + model_type
-        filename += '_' + str(layer)
+        filename += '_' + str(layer) + '_'
         fn = glob.glob(filename +'*.pickle')
         print(filename,fn)
         biggest = 0
@@ -61,4 +61,15 @@ def load_perceptron(layer = None, small = True, ctc = None, name = None):
         classifier = pickle.load(fin)
     return classifier
 
+    
+class Perceptron:
+    def __init__(self, small = True, ctc = None, filename = None, layers = []):
+        if not layers: 
+            if small: layers = [1,6,12,18,21]
+            else: layers = [1,10,19,28,37,46]
+        self.layers = layers
+        self.ctc = ctc
+        self.filename = filename
+        c = [load_perceptron(l,small,ctc, filename) for l in layers]
+        self.classifiers = c
     
