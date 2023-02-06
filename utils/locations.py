@@ -14,6 +14,8 @@ syllable_dir= '../SYLLABLE/'
 timestamps_dir='../O_PHONEMES_TIMESTAMPS/'
 ctc_hidden_states_dir='../O_CTC_HIDDEN_STATES/'
 hidden_states_dir='../O_HIDDEN_STATES/'
+new_ctc_hidden_states_dir='/vol/tensusers3/mbentum/O_CTC_HIDDEN_STATES/'
+new_hidden_states_dir='/vol/tensusers3/mbentum/O_HIDDEN_STATES/'
 
 cache_dir = '../WAV2VEC_DATA/'
 perceptron_dir = '../PERCEPTRONS/'
