@@ -105,6 +105,7 @@ class Phrase_hidden_states:
                 d['char'] = self.prelabeled_index_dict[label_index]
             elif self.prelabeled_index_dict: continue
             else: d['char'] = ''
+            if d['char'] == ' ' and random.randint(1,10) != 3: continue
             self._extract_hidden_state_layers(d)
 
     def _extract_hidden_state_layers(self,d):
@@ -119,6 +120,13 @@ class Phrase_hidden_states:
                 self.layer_dict[layer_index] = []
             self.char_dict[d['char']].append( self.hidden_states[-1] )
             self.layer_dict[layer_index].append( self.hidden_states[-1] )
+        if hasattr(self.outputs,'extract_features'):
+            self.layer_dict['cnn_features'] = []
+            d['hidden_state_layer_index'] = 'cnn_features'
+            d['vector'] = self._get_features(d['phrase_frame_index'])
+            self.hidden_states.append(Hidden_state(**d))
+            self.char_dict[d['char']].append( self.hidden_states[-1] )
+            self.layer_dict['cnn_features'].append( self.hidden_states[-1] ) 
 
 
     def _extract_logit_char(self,phrase_frame_index):
@@ -129,6 +137,11 @@ class Phrase_hidden_states:
 
     def _get_hidden_state(self, layer_index, phrase_frame_index):
         layer = self.outputs.hidden_states[layer_index]
+        if layer.device.type == 'cuda': layer = layer.cpu()
+        return layer[0][phrase_frame_index]
+
+    def _get_features(self, phrase_frame_index):
+        layer = self.outputs.extract_features
         if layer.device.type == 'cuda': layer = layer.cpu()
         return layer[0][phrase_frame_index]
             
