@@ -119,8 +119,8 @@ def textgrid_to_pickle_hidden_states(textgrid,processor,model, name = '',
     if hidden_state_layers: d['hidden_state_layers'] = hidden_state_layers
     hs = cgn_id_to_hidden_states(**d)
     ctc = 'Wav2Vec2ForCTC' in str(type(model))
-    if ctc: directory = locations.ctc_hidden_states_dir
-    else: directory = locations.hidden_states_dir
+    if ctc: directory = locations.new_ctc_hidden_states_dir
+    else: directory = locations.new_hidden_states_dir
     if name: name = "_" + name
     fout = open(directory + textgrid.cgn_id + name + '.pickle','wb')
     pickle.dump(hs,fout)
@@ -161,4 +161,6 @@ def audio_to_hidden_states(audio_filename, hidden_state_layers,
          hidden_state_layers = hidden_state_layers)
     hs.add_phrase_hidden_states(phs)
     return hs
+
+
 
