@@ -308,11 +308,16 @@ def reorder_simple_ipa_vocab_to_phoneme_classes(simple_ipa_vocab):
 
 class BPCs:
     '''container for all BPC instances.'''
-    def __init__(self,names, bpc_sets, complete_set, ypsilon = 0.001):
+    def __init__(self,names, bpc_sets, complete_set, epsilon = 0.001):
+        '''structure to hold and find a given bpc
+        names           names of the bpcs (e.g. fricative, plosive)
+        bpc_sets        sets of phonemes that belong to the bpc
+        complete_set    all the phonemes
+        '''
         self.names = names
         self.bpc_sets = bpc_sets
         self.complete_set = complete_set
-        self.ypsilon = ypsilon
+        self.epsilon = epsilon
         self.make_bpcs()
 
     def __repr__(self):
@@ -328,7 +333,7 @@ class BPCs:
         self.bpcs = {}
         for name, bpc_set in zip(self.names, self.bpc_sets):
             other_set = self.complete_set - bpc_set
-            self.bpcs[name] = BPC(name,bpc_set, other_set, self.ypsilon)
+            self.bpcs[name] = BPC(name,bpc_set, other_set, self.epsilon)
 
     def find_bpc(self,phoneme):
         for bpc in self.bpcs.values():
@@ -347,12 +352,17 @@ class BPCs:
 
 class BPC:
     '''broad phonemic class.'''
-    def __init__(self,name,bpc_set,other_set, ypsilon = 0.001):
-        '''class to contain set of phonemes in a given BPC.'''
+    def __init__(self,name,bpc_set,other_set, epsilon = 0.001):
+        '''class to contain set of phonemes in a given BPC.
+        name        name of the bpc (e.g. fricative)
+        bpc_set     the phonemes that belong to the bpc 
+        other_set   the phonemes that not belong to the bpc
+        epsilon     small prob value for the step destribution    
+        '''
         self.name = name
         self.bpc_set = bpc_set
         self.other_set = other_set
-        self.ypsilon = ypsilon
+        self.epsilon = epsilon
 
     def __repr__(self):
         m ='BPC: '+ self.name + ' '
@@ -369,7 +379,7 @@ class BPC:
     def synthetic_probability_ditribution(self, goal_phoneme):
         d = {}
         for phoneme in self.other_set:
-            d[phoneme] = self.ypsilon
+            d[phoneme] = self.epsilon
         self.other_prob = sum(d.values())
         self.bpc_prob = 1 - self.other_prob
         for phoneme in self.bpc_set:
@@ -381,6 +391,7 @@ class BPC:
     
     
 def make_bpcs():
+    '''make a BPCs instance with all broad phonetic classes.'''
     names = 'plosive,nasal,approximant,fricative'
     names += ',high_vowel,mid_vowel,low_vowel'
     names = names.split(',')

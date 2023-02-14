@@ -13,6 +13,7 @@ def save_score(score, name, layer, nfiles):
         fout.write(str(score))
 
 def train_classifiers(hidden_states, name = ''):
+    '''train mlp classifiers based on the data structure hidden_states.'''
     if name: name = '_' + name
     layers = hidden_states.layer_dict.keys()
     nfiles =len(hidden_states.filenames)
@@ -36,12 +37,14 @@ def train_classifiers(hidden_states, name = ''):
             pickle.dump(clf,fout)
 
 def show_scores():
+    '''show scores of the differen classifiers.'''
     fn = glob.glob(locations.perceptron_dir + 'score*')
     for f in fn:
         name = f.split('/')[-1]
         print(name.ljust(35), round(float(open(f).read()),2))
     
 def load_perceptron(layer = None, small = True, ctc = None, name = None):
+    '''load a specific mlp classifier based on parameters.'''
     if layer == None and small == False: layer = 19
     elif layer == None and small == True: layer = 18
     if ctc == None and small == False: ctc = False
@@ -66,11 +69,21 @@ def load_perceptron(layer = None, small = True, ctc = None, name = None):
     return classifier
 
 
-def predict_label_hidden_state(clf,hs,layer):
+def hidden_state_to_prob_matrix(clf,hs,layer):
+    '''compute the phoneme label probabilities based on the hidden state
+    data structure. You can make a hs instance with the to_vector module.
+    clf         layer and model (pretrain/ctc) specific mlp classifier
+    hs          data structure based on pretrain/ctc wav2vec model
+                holds the output of the wav2vec model in a structured way
+    layer       the specific layer of the wav2vec model to use to 
+                compute the phoneme label probs
+                layer should correspond with the classifier
+    '''
     X = hs.to_dataset(layer)
     return clf.predict_proba(X)
     
 class Perceptron:
+    '''class to hold layer specific classifiers.'''
     def __init__(self, small = True, ctc = None, filename = None, layers = []):
         if not layers: 
             if small: layers = [1,6,12,18,21,24]
