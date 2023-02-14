@@ -318,6 +318,7 @@ class BPCs:
     def __repr__(self):
         m = 'broad phonetic classes: '
         m += ' '.join(self.names)
+        return m
 
     def __str__(self):
         return '\n'.join([x.__repr__() for x in self.bpcs.values()])
