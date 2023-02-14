@@ -19,6 +19,12 @@ def train_classifiers(hidden_states, name = ''):
     if nfiles > 0: nfiles = str(nfiles)
     else: nfiles = ''
     for layer in layers:
+        f=locations.perceptron_dir + 'clf' + name + '_' + str(layer) 
+        f+= '_' + nfiles +'.pickle'
+        if os.path.isfile(f):
+            print(f, 'already exists, skipping')
+            continue
+        print('starting on',f)
         X, y = hidden_states.to_dataset(layer)
         X_train, X_test, y_train, y_test = train_test_split(X, y, 
             stratify=y,random_state=1)
@@ -26,8 +32,6 @@ def train_classifiers(hidden_states, name = ''):
         score = clf.score(X_test, y_test)
         print(name, layer, score, nfiles)
         save_score(score, name, layer, nfiles)
-        f=locations.perceptron_dir + 'clf' + name + '_' + str(layer) 
-        f+= '_' + nfiles +'.pickle'
         with open(f, 'wb') as fout:
             pickle.dump(clf,fout)
 
@@ -61,11 +65,16 @@ def load_perceptron(layer = None, small = True, ctc = None, name = None):
         classifier = pickle.load(fin)
     return classifier
 
+
+def predict_label_hidden_state(clf,hs,layer):
+    X = hs.to_dataset(layer)
+    return clf.predict_proba(X)
     
 class Perceptron:
     def __init__(self, small = True, ctc = None, filename = None, layers = []):
         if not layers: 
-            if small: layers = [1,6,12,18,21]
+            if small: layers = [1,6,12,18,21,24]
+            if not ctc: layers = ['cnn_features'] + layers
             else: layers = [1,10,19,28,37,46]
         self.layers = layers
         self.ctc = ctc
@@ -73,3 +82,5 @@ class Perceptron:
         c = [load_perceptron(l,small,ctc, filename) for l in layers]
         self.classifiers = c
     
+
+
