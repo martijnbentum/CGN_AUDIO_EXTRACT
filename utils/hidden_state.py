@@ -6,6 +6,8 @@ import numpy as np
 import pickle
 import random
 
+random.seed(9)
+
 class Hidden_states:
     def __init__(self, model_name = '', ctc = True, vocab = None):
         self.hidden_states = []
