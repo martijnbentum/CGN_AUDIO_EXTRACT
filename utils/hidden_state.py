@@ -133,6 +133,7 @@ class Phrase_hidden_states:
 
     def _extract_logit_char(self,phrase_frame_index):
         if not phrase_frame_index: return ''
+        if not hasattr(self.outputs,'logits'): return ''
         logit_frame =self.outputs.logits[0][phrase_frame_index].detach().numpy()
         i = np.argmax(logit_frame)
         return self.reverse_vocab[i]
