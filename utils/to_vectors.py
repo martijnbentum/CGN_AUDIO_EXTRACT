@@ -147,13 +147,18 @@ def textgrid_to_timestamp_file(textgrid, pipeline):
     
 def audio_to_hidden_states(audio_filename, hidden_state_layers,
         start = None, end = None, frame_duration = 0.02, processor=None, 
-        model = None):
+        model = None, ctc = True):
     if not processor or not model: 
-        processor, model = checkpoint_to_processor_and_ctc_model()
+        if ctc: 
+            processor, model = checkpoint_to_processor_and_ctc_model()
+            outputs = audio_to_ctc_outputs(audio_filename,start,end,
+                processor,model=model,frame_duration=frame_duration)
+        else:
+            processor,model=load_pretrained_processor_model(version='small')
+            outputs = audio_to_pretrained_outputs(audio_filename, start, 
+            end, processor, model, frame_duration)
     vocab= processor.tokenizer.get_vocab()
     hs = hidden_state.Hidden_states()
-    outputs = audio_to_ctc_outputs(audio_filename,start,end,processor,
-        model=model,frame_duration=frame_duration)
     nframes = outputs.hidden_states[0].shape[1]
     indices = tti.start_end_time_to_indices(start,end,frame_duration)
     print(outputs.hidden_states[1].shape, nframes, len(indices))
