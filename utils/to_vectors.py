@@ -145,9 +145,11 @@ def textgrid_to_timestamp_file(textgrid, pipeline):
     return output
 
     
-def audio_to_hidden_states(audio_filename, hidden_state_layers,
+def audio_to_hidden_states(audio_filename, hidden_state_layers = None,
         start = None, end = None, frame_duration = 0.02, processor=None, 
         model = None, ctc = True):
+    if not hidden_state_layers:
+        hidden_state_layers = [1,3,6,9,12,18,21,24]
     if not processor or not model: 
         if ctc: 
             processor, model = checkpoint_to_processor_and_ctc_model()
