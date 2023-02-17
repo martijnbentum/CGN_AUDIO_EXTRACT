@@ -73,7 +73,7 @@ class Hidden_states:
 
 
 class Phrase_hidden_states:
-    def __init__(self,outputs,indices, phrase_index=None, cgn_id=None, 
+    def __init__(self,outputs,indices = None, phrase_index=None, cgn_id=None, 
         vocab=None,hidden_state_layers = [1,6,12,18,14], extract_logit = True):
         self.outputs = outputs
         self.nhidden_state_frames = self.outputs.hidden_states[0][0].shape[0]
@@ -96,6 +96,8 @@ class Phrase_hidden_states:
         self.hidden_states = []
         self.char_dict = {}
         self.layer_dict = {}
+        if not self.indices:
+            for i in 
         for phrase_frame_index, label_index in self.indices:
             if phrase_frame_index >= self.nhidden_state_frames: continue
             d = {'cgn_id':self.cgn_id,'frame_index':label_index}
