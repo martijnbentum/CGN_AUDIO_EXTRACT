@@ -1,6 +1,11 @@
 from utils import hidden_state
+from utils import perceptron
 from utils import phonemes
+from utils import to_vectors
+from utils import identifiers
+from text.models import Textgrid
 import numpy as np
+
 
 def get_vocabs():
     '''get the vocabs to get the indices of the phonemes 
@@ -67,7 +72,76 @@ def kl_divergence(p,q):
     '''
     return np.sum(p*np.log(p/q))
         
+class KLAudio:
+    def __init__(self, cgn_id):
+        self.cgn_id = cgn_id
+        self.component = identifiers.cgn_id_to_component(self.cgn_id).name
+        self.compute_klphrases()
 
+    def compute_klphrases(self):
+        textgrid = Textgrid.objects.get(cgn_id = self.cgn_id)
+        self.klphrases_pretrained = []
+        self.klphrases_ctc = []
+        for index, phrase in enumerate(textgrid.phrases()):
+            start_time = phrase[0].start_time
+            end_time = phrase[-1].end_time
+            x = [textgrid.audio.filename,index,start_time,end_time]
+            self.klphrases_pretrained.append( KLPhrase(*x,ctc=False) )
+            self.klphrases_pretrained.append( KLPhrase(*x,ctc=True) )
+        
+        
+
+class KLPhrase:
+    def __init__(self,audio_filename, index, start_time, end_time, ctc):
+        self.audio_filename = audio_filename
+        self.phrase_index = index
+        self.start_time = start_time
+        self.end_time = end_time
+        self.ctc = ctc
+        self.compute_klframes()
+
+    def __repr__(self):
+        return 'KLPhrase: ' + self.audio_filename
+
+    def compute_klframes(self):
+        self.klframe_layer_dict = {}
+        self.klframes = []
+        hs = to_vectors.audio_to_hidden_states(
+            audio_filename = self.audio_filename,
+            start = self.start_time,
+            end = self.end_time,
+            ctc = self.ctc)
+        for layer in hs.layer_dict.keys():
+            print('handling layer:',layer)
+            self.handle_layer(hs, layer)
+
+    def handle_layer(self, hs, layer):
+        self.klframe_layer_dict[layer] = []
+        clf = perceptron.load_perceptron(layer = layer, ctc = self.ctc)
+        x = hs.to_dataset(layer)[0]
+        matrix = clf.predict_proba(x)
+        output = compute_mlp_output_and_synthetic_bpc(matrix)
+        for line in output:
+            phoneme, i, kl = line
+            klf = KLFrame(phoneme, i, kl, layer, self.ctc)
+            self.klframe_layer_dict[layer].append(klf)
+            self.klframes.append(klf)
+        
     
+class KLFrame:
+    def __init__(self, phoneme, i, kl, layer, ctc):
+        self.phoneme = phoneme
+        self.frame_index = i
+        self.kl = kl
+        self.layer = layer
+        self.ctc = ctc
+
+    def __repr__(self):
+        kl = str(round(self.kl,2)) if self.kl != None else 'NA'
+        model_type = 'ctc' if self.ctc else 'pretrained'
+        m = self.phoneme + ' ' + kl + ' ' 
+        m += str(self.layer) + ' ' + model_type
+        return m
+
 
     
