@@ -96,8 +96,10 @@ class Phrase_hidden_states:
         self.hidden_states = []
         self.char_dict = {}
         self.layer_dict = {}
+        irange = range(self.nhidden_state_frames)
         if not self.indices:
-            for i in 
+            ''' if indices not set use frame index '''
+            self.indices = [x for x in zip(irange,irange)]
         for phrase_frame_index, label_index in self.indices:
             if phrase_frame_index >= self.nhidden_state_frames: continue
             d = {'cgn_id':self.cgn_id,'frame_index':label_index}
