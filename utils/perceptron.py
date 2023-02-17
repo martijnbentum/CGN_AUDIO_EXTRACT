@@ -55,7 +55,7 @@ def load_perceptron(layer = None, small = True, ctc = None, name = None):
         filename = locations.perceptron_dir + 'clf_' + size + '_' + model_type
         filename += '_' + str(layer) + '_'
         fn = glob.glob(filename +'*.pickle')
-        print(filename,fn)
+        # print(filename,fn)
         biggest = 0
         for f in fn:
             n_files = int(f.split('_')[-1].split('.')[0])
