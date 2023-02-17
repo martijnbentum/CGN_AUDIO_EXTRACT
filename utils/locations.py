@@ -17,6 +17,8 @@ hidden_states_dir='../O_HIDDEN_STATES/'
 new_ctc_hidden_states_dir='/vol/tensusers3/mbentum/O_CTC_HIDDEN_STATES/'
 new_hidden_states_dir='/vol/tensusers3/mbentum/O_HIDDEN_STATES/'
 
+kl_audio_dir = '/vol/tensusers3/mbentum/KL_AUDIOS/'
+
 cache_dir = '../WAV2VEC_DATA/'
 perceptron_dir = '../PERCEPTRONS/'
 
