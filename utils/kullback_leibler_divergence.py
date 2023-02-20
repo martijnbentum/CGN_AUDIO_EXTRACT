@@ -8,6 +8,7 @@ from text.models import Textgrid
 import numpy as np
 import os
 import pickle
+from matplotlib import pyplot as plt
 
 def load_kl_audio(cgn_id):
     f = locations.kl_audio_dir + cgn_id + '_kl.pickle'
@@ -16,10 +17,34 @@ def load_kl_audio(cgn_id):
     return kla
 
 
-def kla_to_matrix(kla,model_type = 'pretrained'):
-    if model_type == 'pretrained': layers = kla.kl_pretrained_layers
-    else: layers = kla.kl_ctc_layers
-    nlayers = len(layers)
+def boxplot_kl_frames(layer_to_vector_dict, name = '', filename = ''):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212)
+    axis = [ax1,ax2]
+    for i,key in enumerate(layer_to_vector_dict.keys()):
+        v = list(layer_to_vector_dict[key].values())
+        ticklabels = list(layer_to_vector_dict[key].keys())
+        if key == 'ctc': 
+            v = [np.array([])] + v
+            ticklabels = [''] + ticklabels
+        else:
+            ticklabels[ticklabels.index('cnn_features')] = 'cnn'
+        axis[i].boxplot(v)
+        axis[i].title.set_text(key)
+        axis[i].xaxis.set_ticklabels(ticklabels)
+    ax.yaxis.set_ticks([])
+    ax.xaxis.set_ticks([])
+    axis[-1].set_xlabel('wav2vec 2.0 layer')
+    axis[-1].set_ylabel('kullback-leibler divergence')
+    if not name:
+        name = 'wav2vec 2.0 hidden states based MLP phoneme classifier'
+        name += ' kullback-leibler divergence'
+    fig.suptitle(name)
+    if filename:
+        fig.savefig(filename)
+    return fig
         
 
 
