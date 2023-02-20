@@ -25,6 +25,7 @@ def boxplot_kl_frames(layer_to_vector_dict, name = '', filename = ''):
     axis = [ax1,ax2]
     for i,key in enumerate(layer_to_vector_dict.keys()):
         v = list(layer_to_vector_dict[key].values())
+        if type(v[0]) != float: v = frame_lists_to_kl_vector(v)
         ticklabels = list(layer_to_vector_dict[key].keys())
         if key == 'ctc': 
             v = [np.array([])] + v
@@ -143,6 +144,7 @@ class KLAudio:
         self.cgn_id = cgn_id
         self.component = identifiers.cgn_id_to_component(self.cgn_id).name
         self.compute_klphrases()
+        self._set_layer_dicts()
 
     def __repr__(self):
         m = self.cgn_id + ' '
@@ -159,6 +161,26 @@ class KLAudio:
             x = [textgrid.audio.filename,index,start_time,end_time]
             self.klphrases_pretrained.append( KLPhrase(*x,ctc=False) )
             self.klphrases_ctc.append( KLPhrase(*x,ctc=True) )
+
+    def _add_phrase_layer_dict(self,phrase, d):
+        for layer, frames in phrase.klframe_layer_dict.items():
+            if not layer in d.keys(): d[layer] = []
+            d[layer].extend(frames)
+
+    @property
+    def klframe_layer_dict(self):
+        if hasattr(self,'_klframe_layer_dict'): 
+            return self._klframe_layer_dict
+        self._klframe_layer_dict = {'pretrained':{},'ctc':{}}
+        for phrase in self.klphrases_pretrained:
+            self._add_phrase_layer_dict(
+                phrase,
+                self.klframe_layer_dict['pretrained'])
+        for phrase in self.klphrases_ctc:
+            self._add_phrase_layer_dict(
+                phrase,
+                self.klframe_layer_dict['ctc'])
+        return self._klframe_layer_dict
 
     @property
     def klframes_pretrained(self):
@@ -315,6 +337,14 @@ class KLFrame:
         return sorted_phoneme_probs(self.phonemes_vector,
             self.probability_vector)
 
+    @property
+    def bpc(self):
+        bpcs = phonemes.make_bpcs()
+        try: bpc = bpcs.find_bpc(self.phoneme)
+        except ValueError: return None
+        return bpc
+        
+
     
 def sorted_phoneme_probs(phonemes_vector,probability_vector):
     output = []
@@ -324,7 +354,7 @@ def sorted_phoneme_probs(phonemes_vector,probability_vector):
     return output
         
 
-def cgn_ids_to_layer_vector_dict(cgn_ids, model_type =None):
+def cgn_ids_to_layer_vector_dict(cgn_ids):
     d = {'pretrained':{},'ctc':{}}
     for cgn_id in cgn_ids:
         kla = load_kl_audio(cgn_id)
@@ -344,3 +374,45 @@ def phrases_to_layer_vector_dict(klphrases,model_type, d):
                 old_vector = d[model_type][layer] 
                 d[model_type][layer]=np.concatenate([old_vector,vector])
     return d
+
+def _add_layer_frame_dict(d,klad):
+    for layer, frames in klad.items():
+        if not layer in d.keys():
+            d[layer] = []
+        d[layer].extend(frames)
+
+def cgn_ids_layer_frame_dict(cgn_ids):
+    d = {'pretrained':{},'ctc':{}}
+    for cgn_id in cgn_ids:
+        kla = load_kl_audio(cgn_id)
+        for mt in ['pretrained','ctc']:
+            _add_layer_frame_dict(d[mt],kla.klframe_layer_dict[mt])
+    return d
+
+def _add_bpc_frames(o, d, bpc):
+    for layer,frames in d.items():
+        if layer not in o.keys(): o[layer] = []
+        selected = [x for x in frames if bpc.part_of(x.phoneme)]
+        if selected:
+            o[layer].extend(selected)
+        
+        
+        
+
+def cgn_ids_bpc_frame_dict(cgn_ids = None, d = None):
+    if not d: d = cgn_ids_layer_frame_dict(cgn_ids)
+    o = {}
+    bpcs = phonemes.make_bpcs()
+    for name in bpcs.names:
+        o[name] = {'pretrained':{},'ctc':{}}
+        for mt in ['pretrained','ctc']:
+            _add_bpc_frames(o[name][mt],d[mt], bpcs.bpcs[name])
+    return o
+    
+
+    
+def frame_lists_to_kl_vector(frame_lists):
+    o = []
+    for frame_list in frame_lists:
+        o.append([x.kl for x in frame_list if x.kl])
+    return o
