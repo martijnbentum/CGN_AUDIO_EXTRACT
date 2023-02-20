@@ -9,6 +9,13 @@ import numpy as np
 import os
 import pickle
 
+def load_kl_audio(cgn_id):
+    f = locations.kl_audio_dir + cgn_id + '_kl.pickle'
+    with open(f,'rb') as fin:
+        kla = pickle.load(fin)
+    return kla
+
+
 def cgn_id_to_kl_audio_filename(cgn_id):
     f = locations.kl_audio_dir + cgn_id + '_kl.pickle'
     return f
