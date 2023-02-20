@@ -16,6 +16,13 @@ def load_kl_audio(cgn_id):
     return kla
 
 
+def kla_to_matrix(kla,model_type = 'pretrained'):
+    if model_type == 'pretrained': layers = kla.kl_pretrained_layers
+    else: layers = kla.kl_ctc_layers
+    nlayers = len(layers)
+        
+
+
 def cgn_id_to_kl_audio_filename(cgn_id):
     f = locations.kl_audio_dir + cgn_id + '_kl.pickle'
     return f
@@ -136,6 +143,52 @@ class KLAudio:
     def klframes_ctc(self):
         return self._get_frames('_ctc')
 
+    @property
+    def kl_pretrained_layers(self):
+        return self.klphrases_pretrained[0].layer_names
+
+    @property
+    def kl_ctc_layers(self):
+        return self.klphrases_ctc[0].layer_names
+
+    @property
+    def n_total_frames(self):
+        nframes = 0
+        for phrase in self.klphrases_pretrained:
+            nframes += phrase.n_total_frames
+        return nframes
+
+    def _make_n_usabel_frames(self, model_type, d):
+        if model_type == 'pretrained': phrases = self.klphrases_pretrained
+        else: phrases = self.klphrases_ctc
+        for phrase in phrases:
+            for layer, n in phrase.n_usable_frames.items():
+                if layer not in d[model_type].keys(): 
+                    d[model_type][layer] = n
+                else:
+                    d[model_type][layer] += n
+
+    @property
+    def n_usable_frames(self):
+        d = {'pretrained':{},'ctc':{}}
+        for key in d.keys():
+            self._make_n_usabel_frames(key, d)
+        return d
+
+    def _make_layer_vector_dict(self, model_type, d):
+        if model_type == 'pretrained': phrases = self.klphrases_pretrained
+        else: phrases = self.klphrases_ctc
+        phrases_to_layer_vector_dict(phrases,model_type,d)
+
+    @property
+    def layer_vector_dict(self):
+        d = {'pretrained':{},'ctc':{}}
+        for key in d.keys():
+            self._make_layer_vector_dict(key, d)
+        return d
+
+
+
     def _get_frames(self,frame_type):
         if hasattr(self,'_klframes_' + frame_type):
             return getattr(self,'_klframes_' + frame_type)
@@ -160,6 +213,35 @@ class KLPhrase:
 
     def __repr__(self):
         return 'KLPhrase: ' + self.audio_filename
+
+    @property
+    def n_total_frames(self):
+        return len(self.klframe_layer_dict[1])
+
+    @property
+    def n_usable_frames(self):
+        d = {}
+        for layer in self.layer_names:
+            frames = self.klframe_layer_dict[layer]
+            d[layer] = len([x for x in frames if x.kl != None])
+        return d
+
+    @property
+    def layer_names(self):
+        k = list(self.klframe_layer_dict.keys())
+        if 'cnn_features' in k:
+            x = k.pop(k.index('cnn_features'))
+            k = [x] + k
+        return k
+
+    @property
+    def layer_vector_dict(self):
+        d = {}
+        for layer in self.layer_names:
+            frames = self.klframe_layer_dict[layer]
+            d[layer] = np.array([x.kl for x in frames if x.kl != None])
+        return d
+            
 
     def compute_klframes(self):
         self.klframe_layer_dict = {}
@@ -217,4 +299,23 @@ def sorted_phoneme_probs(phonemes_vector,probability_vector):
     return output
         
 
+def cgn_ids_to_layer_vector_dict(cgn_ids, model_type =None):
+    d = {'pretrained':{},'ctc':{}}
+    for cgn_id in cgn_ids:
+        kla = load_kl_audio(cgn_id)
+        phrases_to_layer_vector_dict(kla.klphrases_ctc,'ctc',d)
+        phrases_to_layer_vector_dict(
+            kla.klphrases_pretrained,
+            'pretrained',
+            d)
+    return d
 
+def phrases_to_layer_vector_dict(klphrases,model_type, d):
+    for phrase in klphrases:
+        for layer, vector in phrase.layer_vector_dict.items():
+            if layer not in d[model_type].keys(): 
+                d[model_type][layer] = vector
+            else:
+                old_vector = d[model_type][layer] 
+                d[model_type][layer]=np.concatenate([old_vector,vector])
+    return d
