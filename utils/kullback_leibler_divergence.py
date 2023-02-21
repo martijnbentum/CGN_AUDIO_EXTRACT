@@ -163,7 +163,8 @@ class KLAudio:
             self.klphrases_ctc.append( KLPhrase(*x,ctc=True) )
 
     def _add_phrase_layer_dict(self,phrase, d):
-        for layer, frames in phrase.klframe_layer_dict.items():
+        for layer in phrase.layer_names:
+            frames = phrase.klframe_layer_dict[layer]
             if not layer in d.keys(): d[layer] = []
             d[layer].extend(frames)
 
@@ -397,8 +398,6 @@ def _add_bpc_frames(o, d, bpc):
             o[layer].extend(selected)
         
         
-        
-
 def cgn_ids_bpc_frame_dict(cgn_ids = None, d = None):
     if not d: d = cgn_ids_layer_frame_dict(cgn_ids)
     o = {}
