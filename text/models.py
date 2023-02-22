@@ -181,6 +181,12 @@ class Word(models.Model):
         m += ' | ' + str(round(self.end_time - self.start_time,2))
         return m
 
+    def __eq__(self, other):
+        if not type(self) == type(other): return False
+        return self.pk == other.pk
+        
+
+
     class Meta:
         unique_together = ('textgrid','speaker','awd_word_tier_index')
 
