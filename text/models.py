@@ -185,6 +185,9 @@ class Word(models.Model):
         if not type(self) == type(other): return False
         return self.pk == other.pk
         
+    def __gt__(self, other):
+        if not type(self) == type(other): return False
+        return self.start_time > other.start_time
 
 
     class Meta:
