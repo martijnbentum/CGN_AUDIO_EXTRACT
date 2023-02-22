@@ -273,3 +273,14 @@ def equal_with_delta(n1,n2,delta):
     lower_bound, upper_bound = n1-delta, n1+delta
     if n2 >= lower_bound and n2 <= upper_bound: return True
     return False
+
+def sort_phrases(phrases):
+    return sorted(phrases, key = lambda x: x[0].start_time)
+
+def phrases_to_text(phrases):
+    p= sort_phrases(phrases)
+    o = []
+    for phrase in p:
+        o.append(phrase_to_text(phrase))
+    return ' '.join(o)
+    
