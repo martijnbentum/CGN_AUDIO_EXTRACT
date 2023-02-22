@@ -57,7 +57,8 @@ class Align:
         self.cgn_id = cgn_id
         self.textgrid = Textgrid.objects.get(cgn_id = cgn_id)
         self.awd_words = list(self.textgrid.word_set.all())
-        self.awd_text = ' '.join([w.awd_word for w in self.awd_words])
+        # self.awd_text = ' '.join([w.awd_word for w in self.awd_words])
+        self.awd_text = phrases_to_text(self.textgrid.phrases())
         self._set_wav2vec_table_and_text()
         self._set_align()
         self._set_phrases()
@@ -69,6 +70,7 @@ class Align:
 
     def _set_align(self):
         self.align_filename = cgn_align + self.cgn_id
+        print(self.align_filename)
         if os.path.isfile(self.align_filename): 
             with open(self.align_filename) as fin:
                 self.align = fin.read()
@@ -77,14 +79,13 @@ class Align:
             with open(self.align_filename, 'w') as fout:
                 fout.write(self.align)
         
-
     def _set_phrases(self):
-        phrases = self.textgrid.phrases()
+        phrases = sort_phrases(self.textgrid.phrases())
         o = align_phrases_with_aligned_text(phrases,self.aligned_cgn_text,
             self.awd_words)
         self.phrases = []
-        for phrase,p, start_index, end_index in o:
-            p = Phrase(phrase,p,self,start_index, end_index)
+        for phrase, start_index, end_index in o:
+            p = Phrase(phrase,self,start_index, end_index)
             self.phrases.append(p)
             
 
@@ -109,9 +110,8 @@ class Align:
         return o
 
 class Phrase:
-    def __init__(self,phrase,p=None,align=None,start_index=None,end_index=None):
+    def __init__(self,phrase,align=None,start_index=None,end_index=None):
         self.phrase = phrase
-        self.p = p
         self.align = align
         self.start_time = self.phrase[0].start_time
         self.end_time = self.phrase[-1].end_time
@@ -213,6 +213,45 @@ def align_phrases_with_aligned_text(phrases, text, word_list):
     word_indices = []
     for phrase in phrases:
         if hasattr(phrase,'text'): phrase = phrase.phrase
+        pt = phrase_to_text(phrase)
+        end = _find_end_index(pt,text,start, start)
+        if not end:
+            output.append([phrase,None,None])
+        else:
+            output.append([phrase,start,end])
+            start = end
+    return output
+
+
+
+    
+def equal_with_delta(n1,n2,delta):
+    if type(n1) != float: raise ValueError('gt timestamp should be available')
+    if type(n2) != float: return False
+    lower_bound, upper_bound = n1-delta, n1+delta
+    if n2 >= lower_bound and n2 <= upper_bound: return True
+    return False
+
+def sort_phrases(phrases):
+    return sorted(phrases, key = lambda x: x[0].start_time)
+
+def phrases_to_text(phrases):
+    p= sort_phrases(phrases)
+    o = []
+    for phrase in p:
+        o.append(phrase_to_text(phrase))
+    return ' '.join(o)
+
+
+# ---- old -------
+
+'''
+def align_phrases_with_aligned_text(phrases, text, word_list):
+    output = []
+    start = 0
+    word_indices = []
+    for phrase in phrases:
+        if hasattr(phrase,'text'): phrase = phrase.phrase
         last_word_indices = word_indices[:]
         word_indices = _find_word_indices(phrase, word_list)
         between_word_indices = _find_between_word_indices(last_word_indices,
@@ -264,23 +303,5 @@ def _add_missing_words(word_indices,word_list):
     start = word_indices[0]
     end = word_indices[-1] + 1
     return word_list[start:end]
-
-
     
-def equal_with_delta(n1,n2,delta):
-    if type(n1) != float: raise ValueError('gt timestamp should be available')
-    if type(n2) != float: return False
-    lower_bound, upper_bound = n1-delta, n1+delta
-    if n2 >= lower_bound and n2 <= upper_bound: return True
-    return False
-
-def sort_phrases(phrases):
-    return sorted(phrases, key = lambda x: x[0].start_time)
-
-def phrases_to_text(phrases):
-    p= sort_phrases(phrases)
-    o = []
-    for phrase in p:
-        o.append(phrase_to_text(phrase))
-    return ' '.join(o)
-    
+'''
