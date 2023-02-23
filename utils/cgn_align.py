@@ -45,7 +45,7 @@ def make_alignments():
             print('skiping',cgn_id)
             continue
         print('handling',cgn_id)
-        Align(cgn_id)
+        Align(cgn_id, make_phrases = False)
         
     
 
@@ -53,7 +53,7 @@ def make_alignments():
 class Align:
     '''align object to align cgn textgrid and wav2vec transcript.
     '''
-    def __init__(self,cgn_id):
+    def __init__(self,cgn_id, make_phrases = True):
         self.cgn_id = cgn_id
         self.textgrid = Textgrid.objects.get(cgn_id = cgn_id)
         self.awd_words = list(self.textgrid.word_set.all())
@@ -61,12 +61,14 @@ class Align:
         self.awd_text = phrases_to_text(self.textgrid.phrases())
         self._set_wav2vec_table_and_text()
         self._set_align()
-        self._set_phrases()
+        if make_phrases:
+            self._set_phrases()
 
     def _set_wav2vec_table_and_text(self):
         self.wav2vec_base_filename = cgn_wav2vec_dir + self.textgrid.cgn_id
-        self.wav2vec_table=load_table(self.wav2vec_base_filename+'.table')
-        self.wav2vec_text=load_text(self.wav2vec_base_filename+'.txt')
+        table = load_table(self.wav2vec_base_filename+'.table')
+        self.wav2vec_table = fix_unk_in_table(table)
+        self.wav2vec_text = load_text(self.wav2vec_base_filename+'.txt')
 
     def _set_align(self):
         self.align_filename = cgn_align + self.cgn_id
@@ -105,8 +107,9 @@ class Align:
             if char == '-': 
                 o.append([])
                 continue
-            i += 1
+            # print(i,char)
             o.append(self.wav2vec_table[i])
+            i += 1
         return o
 
 class Phrase:
@@ -242,8 +245,22 @@ def phrases_to_text(phrases):
         o.append(phrase_to_text(phrase))
     return ' '.join(o)
 
+def _unk_in_table(table):
+    for line in table:
+        if line[0] == '[UNK]': return True
+    return False
 
-# ---- old -------
+def fix_unk_in_table(table):
+    if not _unk_in_table(table): return table
+    output = []
+    for line in table:
+        if line[0] == '[UNK]':
+            output.extend([[x,line[1],line[2]] for x in list('[UNK]')])
+        else: output.append(line)
+    return output
+    
+
+# ---- JUNK -------
 
 '''
 def align_phrases_with_aligned_text(phrases, text, word_list):
