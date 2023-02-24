@@ -1,8 +1,9 @@
 # part of the ASTA project to align wav2vec and cgn with nw
 
 import glob
-import random
+import json
 import os
+import random
 from utils import needleman_wunch as nw
 from text.models import Textgrid
 
@@ -90,6 +91,27 @@ class Align:
             p = Phrase(phrase,self,start_index, end_index)
             self.phrases.append(p)
             
+    def alignment_labels(self, delta = .5):
+        return [p.alignment(delta = delta) for p in self.phrases]
+
+    def perc_bad(self, delta = .5):
+        labels = self.alignment_labels(delta)
+        ntotal = len(labels)
+        if ntotal == 0: return 0
+        nbad = labels.count('bad')
+        return round(nbad / ntotal * 100,2)
+
+    @property
+    def duration(self):
+        return self.textgrid.audio.duration
+
+    @property
+    def component(self):
+        return self.textgrid.component.name
+
+    @property
+    def nspeakers(self):
+        return self.textgrid.nspeakers
 
     @property
     def aligned_wav2vec_text(self):
@@ -111,6 +133,15 @@ class Align:
             o.append(self.wav2vec_table[i])
             i += 1
         return o
+
+    @property
+    def average_match_perc(self):
+        match_percs = []
+        for phrase in self.phrases:
+            match_percs.append(phrase.match_perc)
+        if len(match_percs) == 0: return 0
+        return round(sum(match_percs) / len(match_percs),2)
+
 
 class Phrase:
     def __init__(self,phrase,align=None,start_index=None,end_index=None):
@@ -136,7 +167,8 @@ class Phrase:
         m += str(round(self.end_time,2)) + '\n' 
         m += 'w2v ts:'.ljust(12) + str(self.wav2vec_start_time) + ' '
         m += str(self.wav2vec_end_time) +'\n' 
-        m += 'alignment'.ljust(12) + self.alignment()
+        m += 'alignment:'.ljust(12) + self.alignment() + '\n'
+        m += 'match:'.ljust(12) + str(self.match_perc)
         return m 
 
     def _set_info(self):
@@ -174,7 +206,7 @@ class Phrase:
         if self.start_index == self.end_index == None: return 'bad'
         text_ok = self.cgn_text == self.text
         d = delta
-        start_ok= equal_with_delta(self.start_time, self.wav2vec_start_time, d)
+        start_ok=equal_with_delta(self.start_time,self.wav2vec_start_time,d)
         end_ok = equal_with_delta( self.end_time, self.wav2vec_end_time, d)
         if start_ok and end_ok: return 'good'
         if start_ok:  return 'start match'
@@ -182,7 +214,15 @@ class Phrase:
         if text_ok: return 'middle match'
         return 'bad'
 
-    
+    @property
+    def match_perc(self):
+        match = 0
+        nchar = len(self.aligned_cgn_text)
+        if nchar == 0: return 0
+        texts = zip(self.aligned_cgn_text,self.aligned_wav2vec_text)
+        for cgn_char,w2v_char in texts:
+            if cgn_char == w2v_char: match += 1
+        return round(match / nchar * 100,2)
 
     @property
     def text(self):
@@ -191,6 +231,7 @@ class Phrase:
     @property
     def nchars(self):
         return len(self.text)
+
             
 def phrase_to_text(phrase):
     return ' '.join([w.awd_word for w in phrase])
@@ -260,6 +301,67 @@ def fix_unk_in_table(table):
     return output
     
 
+def extract_all_phrases(aligns):
+    phrases = []
+    for align in aligns:
+        phrases.extend(align.phrases)
+    return phrases
+
+def phrase_to_dataset_line(phrase, phrase_index):
+    p, a = phrase, phrase.align
+    line = [phrase_index,a.cgn_id, a.duration, a.component,a.nspeakers]
+    line.extend([p.start_index,p.end_index, p.nwords])
+    line.extend([round(p.duration,2),p.start_time,p.end_time])
+    line.extend([p.wav2vec_start_time,p.wav2vec_end_time])
+    line.extend([p.alignment(),p.alignment(1),p.alignment(0.1)])
+    line.append(p.match_perc)
+    return line
+
+def phrases_to_dataset(phrases):
+    ds = []
+    for i,phrase in enumerate(phrases):
+        line = phrase_to_dataset_line(phrase,i)
+        ds.append(line)
+    return ds
+
+def align_to_dataset_line(align):
+    a = align
+    line = [a.cgn_id, a.duration, a.component, a.nspeakers]
+    line.extend( [len(a.phrases), a.average_match_perc, a.perc_bad()] )
+    line.extend( [a.perc_bad(1),a.perc_bad(0.1)] )
+    return line
+
+def save_dataset(ds,filename):
+    with open(filename,'w') as fout:
+        json.dump(ds,fout)
+
+def load_dataset(filename):
+    with open(filename) as fin:
+        ds = json.load(fin)
+    return ds
+
+def load_align_dataset():
+    return load_dataset('../align_ds.json')
+def load_phrase_dataset():
+    return load_dataset('../phrase_ds.json')
+    
+
+def make_datasets(save = False):
+    cgn_ids = [f.split('/')[-1] for f in glob.glob(cgn_align +'fn*')]
+    phrase_ds = []
+    align_ds = []
+    for i,cgn_id in enumerate(cgn_ids):
+        print(cgn_id,i,len(cgn_id))
+        align = Align(cgn_id)
+        phrase_ds.extend( phrases_to_dataset(align.phrases) )
+        align_ds.append(align_to_dataset_line(align) )
+    if save:
+        save_dataset(phrase_ds,'../phrase_ds.json')
+        save_dataset(align_ds,'../align_ds.json')
+    return phrase_ds, align_ds
+        
+
+
 # ---- JUNK -------
 
 '''
@@ -320,5 +422,7 @@ def _add_missing_words(word_indices,word_list):
     start = word_indices[0]
     end = word_indices[-1] + 1
     return word_list[start:end]
+
+    
     
 '''
