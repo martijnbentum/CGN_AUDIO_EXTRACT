@@ -1,4 +1,5 @@
 import gruut_ipa
+import random
 
 def make_dict(keys,values):
     d = {}
@@ -386,6 +387,35 @@ class BPC:
             if phoneme == goal_phoneme: continue
             d[phoneme] = self.bpc_prob / (len(self.bpc_set) - 1)
         return d
+
+    def random_probability_distribution(self, goal_phoneme):
+        not_gp = self.other_set.union( self.bpc_set ) - set(goal_phoneme)
+        n_bpc = len(self.bpc_set) - 1
+        self.random_bpc = set(random.sample(not_gp, n_bpc))
+        self.random_other = not_gp - self.random_bpc
+        d = {}
+        for phoneme in self.random_other:
+            d[phoneme] = self.epsilon
+        self.random_other_prob = sum(d.values())
+        self.random_bpc_prob = 1 - self.random_other_prob
+        for phoneme in self.random_bpc:
+            d[phoneme] = self.random_bpc_prob / len(self.random_bpc)
+        return d
+
+    def random_other_probability_distribution(self, goal_phoneme):
+        not_gp = self.other_set.union( self.bpc_set ) - set(goal_phoneme)
+        n_bpc = len(self.bpc_set) - 1
+        self.random_bpc = set(random.sample(self.other_set, n_bpc))
+        self.random_other = not_gp - self.random_bpc
+        d = {}
+        for phoneme in self.random_other:
+            d[phoneme] = self.epsilon
+        self.random_other_prob = sum(d.values())
+        self.random_bpc_prob = 1 - self.random_other_prob
+        for phoneme in self.random_bpc:
+            d[phoneme] = self.random_bpc_prob / len(self.random_bpc)
+        return d
+            
         
             
     
@@ -399,6 +429,7 @@ def make_bpcs():
     bpcs = [set(x) for x in bpcs]
     complete= set('ptkbdgnmŋɲlrjwsfxzvɣiɪyuʏøeɛɔoəaɑ')
     return BPCs(names,bpcs,complete)
+
 
 
 
