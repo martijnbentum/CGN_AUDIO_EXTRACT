@@ -2,6 +2,7 @@
 
 import glob
 import json
+from matplotlib import pyplot as plt
 import os
 import random
 from utils import needleman_wunch as nw
@@ -341,9 +342,18 @@ def load_dataset(filename):
     return ds
 
 def load_align_dataset():
-    return load_dataset('../align_ds.json')
+    header = 'cgn_id,duration,component,nspeakers,nphrases,avg_match_perc'
+    header += ',perc_bad_0.5,perc_bad_1,perc_bad_0.1'
+    header = header.split(',')
+    return load_dataset('../align_ds.json'), header
+
 def load_phrase_dataset():
-    return load_dataset('../phrase_ds.json')
+    header = 'phrase_index,cgn_id,audiofile_duration,component,nspeakers'
+    header += ',start_index,end_index,nwords,phrase_duration,start_time'
+    header += ',end_time,wav2vec_start_time,wav2vec_end_time'
+    header += ',label_0.5,label_1,label_0.1,match_perc'
+    header = header.split(',')
+    return load_dataset('../phrase_ds.json'), header
     
 
 def make_datasets(save = False):
@@ -359,6 +369,72 @@ def make_datasets(save = False):
         save_dataset(phrase_ds,'../phrase_ds.json')
         save_dataset(align_ds,'../align_ds.json')
     return phrase_ds, align_ds
+
+def cgn_component_names():
+    d= {'a':'spontaneous dialogues','b':'interviews'}
+    d.update({'c':'telephone dialogues','d':'telephone dialogues'})
+    d.update({'e':'business negotiations'})
+    d.update({'f':'broadcast interviews','g':'debates'})
+    d.update({'h':'classes','i':'broadcast commentaries'})
+    d.update({'j':'newsroom and documentaries','k':'news broadcast'})
+    d.update({'l':'reflections','n':'lectures and speeches'})
+    d.update({'o':'read-aloud stories'})
+    return d
         
+def perc_bad_duration_plot(alpha = .2):
+    ds, header = load_align_dataset()
+    ci = header.index('component')
+    di = header.index('duration')
+    pi = header.index('perc_bad_0.5')
+    comps = list(set([x[ci] for x in ds]))
+    comps = sorted(comps)
+    comps.pop(comps.index('d'))
+    plt.figure()
+    for comp in comps:
+        if comp == 'c': 
+            temp = [x for x in ds if x[ci] in 'cd']
+        else: temp = [x for x in ds if x[ci] == comp]
+        dur = [x[di] for x in temp]
+        perc = [x[pi] for x in temp]
+        plt.scatter(dur,perc,alpha=alpha)
+    component_names = [cgn_component_names()[comp] for comp in comps]
+    leg = plt.legend(component_names)
+    for lh in leg.legendHandles:
+        lh.set_alpha(1)
+    plt.xlabel('audio duration in seconds')
+    plt.ylabel('% incorrectly aligned phrases')
+    return leg, component_names
+        
+
+def delta_start_delta_end_phrase_line(phrase_line, header):
+    l = phrase_line
+    start,end = l[header.index('start_time')],l[header.index('end_time')]
+    w2v_start = l[header.index('wav2vec_start_time')]
+    w2v_end = l[header.index('wav2vec_end_time')]
+    if w2v_start == None or w2v_end == None: return False, False
+    dstart = start - w2v_start
+    dend = end - w2v_end
+    return dstart, dend
+
+def delta_start_delta_end_phrases_ds(phrase_ds, header):
+    dstart, dend = [], [] 
+    for phrase in phrase_ds:
+        s, e = delta_start_delta_end_phrase_line(phrase,header)
+        if s == None or e == None: continue
+        dstart.append(s)
+        dend.append(e)
+    return dstart, dend
+
+def plot_delta_histogram(dstart, dend):
+    s = [x for x in dstart if x < 1 and x > -1]
+    e = [x for x in dend if x < 1 and x > -1]
+    plt.figure()
+    plt.hist(s,bins=100,alpha = 0.5,color='blue')
+    plt.hist(e,bins=100,alpha = 0.5,color='red')
+    plt.legend(['start delta','end delta'])
+    plt.xlabel('seconds')
+    plt.ylabel('phrase counts')
+    
+
 
 
