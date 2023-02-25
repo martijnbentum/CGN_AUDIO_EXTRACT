@@ -17,7 +17,8 @@ def load_kl_audio(cgn_id):
     return kla
 
 
-def boxplot_kl_frames(layer_to_vector_dict, name = '', filename = ''):
+def boxplot_kl_frames(layer_to_vector_dict, name = '', filename = '',
+    kl_type = 'normal'):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax1 = fig.add_subplot(211)
@@ -25,7 +26,9 @@ def boxplot_kl_frames(layer_to_vector_dict, name = '', filename = ''):
     axis = [ax1,ax2]
     for i,key in enumerate(layer_to_vector_dict.keys()):
         v = list(layer_to_vector_dict[key].values())
-        if type(v[0]) != float: v = frame_lists_to_kl_vector(v)
+        if type(v[0]) != float: 
+            v = frame_lists_to_kl_vector(v,kl_type)
+        else:print('not using random_kl setting, kl in vector is used')
         ticklabels = list(layer_to_vector_dict[key].keys())
         if key == 'ctc': 
             v = [np.array([])] + v
@@ -85,7 +88,7 @@ def matrix_to_phoneme_labels(matrix):
         phoneme_labels.append(ipa_reverse_vocab[index])
     return phoneme_labels
         
-def synthetic_probability_ditribution_to_indices(spd):
+def synthetic_probability_distribution_to_indices(spd):
     '''find the correct index (in the prob matrix) for each phoneme
     in the synthetic prob distribution (based on the bpc)
     '''
@@ -106,7 +109,7 @@ def normalize_prob_vector(v, epsilon = 0.00001):
     return v / np.sum(v)
 
 def compute_mlp_output_and_synthetic_bpc(matrix):
-    '''compute the kl divergence for each fram in a prob matrix
+    '''compute the kl divergence for each frame in a prob matrix
     the output from a mlp classifier for a section of audio.
     '''
     bpcs = phonemes.make_bpcs()
@@ -117,8 +120,8 @@ def compute_mlp_output_and_synthetic_bpc(matrix):
         except: 
             output.append([phoneme,i,None,None,None])
             continue
-        spd = bpc.synthetic_probability_ditribution(phoneme)
-        indices = synthetic_probability_ditribution_to_indices(spd)
+        spd = bpc.synthetic_probability_distribution(phoneme)
+        indices = synthetic_probability_distribution_to_indices(spd)
         phons = get_phonemes(indices)
         p = normalize_prob_vector(matrix[i,indices])
         q = list(spd.values())
@@ -234,8 +237,6 @@ class KLAudio:
         for key in d.keys():
             self._make_layer_vector_dict(key, d)
         return d
-
-
 
     def _get_frames(self,frame_type):
         if hasattr(self,'_klframes_' + frame_type):
@@ -383,6 +384,9 @@ def _add_layer_frame_dict(d,klad):
         d[layer].extend(frames)
 
 def cgn_ids_layer_frame_dict(cgn_ids):
+    '''creates a layers frame dict based on all frames of the audio
+    files corresponding to the cgn identifiers.
+    '''
     d = {'pretrained':{},'ctc':{}}
     for cgn_id in cgn_ids:
         kla = load_kl_audio(cgn_id)
@@ -391,6 +395,7 @@ def cgn_ids_layer_frame_dict(cgn_ids):
     return d
 
 def _add_bpc_frames(o, d, bpc):
+    '''add only frames belong to a specific bpc.'''
     for layer,frames in d.items():
         if layer not in o.keys(): o[layer] = []
         selected = [x for x in frames if bpc.part_of(x.phoneme)]
@@ -399,6 +404,7 @@ def _add_bpc_frames(o, d, bpc):
         
         
 def cgn_ids_bpc_frame_dict(cgn_ids = None, d = None):
+    '''create a dictionary of bpcs with frame dictionaries.'''
     if not d: d = cgn_ids_layer_frame_dict(cgn_ids)
     o = {}
     bpcs = phonemes.make_bpcs()
@@ -407,11 +413,53 @@ def cgn_ids_bpc_frame_dict(cgn_ids = None, d = None):
         for mt in ['pretrained','ctc']:
             _add_bpc_frames(o[name][mt],d[mt], bpcs.bpcs[name])
     return o
-    
 
     
-def frame_lists_to_kl_vector(frame_lists):
+def frame_lists_to_kl_vector(frame_lists, kl_type = 'normal'):
+    '''maps klframes to a vector of kl values.'''
     o = []
     for frame_list in frame_lists:
-        o.append([x.kl for x in frame_list if x.kl])
+        if kl_type == 'normal':
+            o.append([x.kl for x in frame_list if x.kl])
+        elif kl_type == 'random':
+            o.append(_frame_list_to_random_kl_vector(frame_list))
+        elif kl_type == 'diff':
+            o.append(_frame_list_to_diff_kl_vector(frame_list))
     return o
+
+def _frame_list_to_random_kl_vector(frame_list):
+    '''maps klframes to a vector of kl values based on a random
+    model distribution.'''
+    has_random = False
+    for x in frame_list:
+        if x.kl and hasattr(x,'kl_random'): has_random = True
+    if has_random:
+        return [x.kl_random for x in frame_list if x.kl]
+    else:
+        return [frame_to_random_kl(x) for x in frame_list if x.kl]
+
+def _frame_list_to_diff_kl_vector(frame_list):
+    '''maps klframes to a vector of kl values based on the 
+    difference between random and model distribution.'''
+    has_random = False
+    for x in frame_list:
+        if x.kl and hasattr(x,'kl_random'): has_random = True
+    if not has_random:
+        _ = [frame_to_random_kl(x) for x in frame_list if x.kl]
+    return [x.kl_diff for x in frame_list if x.kl]
+
+def frame_to_random_kl(frame):
+    '''compute kl based on a random probability distribution
+    '''
+    rpd = frame.bpc.random_other_probability_distribution(frame.phoneme)
+    p_vector = []
+    random_q_vector = []
+    for phoneme, prob in frame.phoneme_probability_vector:
+        p_vector.append(prob)
+        random_q_vector.append(rpd[phoneme])
+    rkl = kl_divergence(np.array(p_vector),np.array(random_q_vector))
+    frame.kl_random = rkl
+    frame.kl_diff = frame.kl - frame.kl_random
+    return rkl
+    
+    
