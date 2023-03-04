@@ -127,6 +127,8 @@ class Align:
         if os.path.isfile(self.align_filename): 
             with open(self.align_filename) as fin:
                 self.align = fin.read()
+            if self.randomize:
+                self.awd_text = self.align.split('\n')[0].replace('-','')
         else:
             self.align = nw.nw(cgn_text, self.wav2vec_text)
             with open(self.align_filename, 'w') as fout:
@@ -134,8 +136,12 @@ class Align:
         
     def _set_phrases(self):
         phrases = sort_phrases(self.textgrid.phrases())
-        o = align_phrases_with_aligned_text(phrases,self.aligned_cgn_text,
-            self.awd_words)
+        if self.randomize:
+            o = align_phrases_with_randomized_aligned_text(phrases,
+                self.awd_text, self.aligned_cgn_text)
+        else:
+            o = align_phrases_with_aligned_text(phrases,
+                self.aligned_cgn_text)
         self.phrases = []
         for phrase, start_index, end_index in o:
             p = Phrase(phrase,self,start_index, end_index)
@@ -276,7 +282,7 @@ class Phrase:
 
     @property
     def text(self):
-        return phrase_to_text(self.phrase)
+        return phrase_to_text(self.phrase).replace('-','')
 
     @property
     def nchars(self):
@@ -284,7 +290,7 @@ class Phrase:
 
             
 def phrase_to_text(phrase):
-    return ' '.join([w.awd_word for w in phrase])
+    return ' '.join([w.awd_word for w in phrase]).replace('-','')
 
 def phrase_to_len(phrase):
     return len(phrase_to_text(phrase))
@@ -293,15 +299,14 @@ def _find_end_index(phrase_text, text, start_index, end_index):
     if type(start_index) != int: return False
     if end_index < start_index + len(phrase_text):
         end_index = start_index + len(phrase_text)
-    compare_text = text[start_index:end_index].replace('-','').strip()
+    compare_text = text[start_index:end_index].replace('-','').strip(' -')
     #print(phrase_text, compare_text)
-    if phrase_text.replace('-','') == compare_text:
+    if phrase_text.replace('-','').strip() == compare_text:
         return end_index
-    if end_index > len(text): return False
     return _find_end_index(phrase_text,text,start_index,end_index+1)
    
 
-def align_phrases_with_aligned_text(phrases, text, word_list):
+def align_phrases_with_aligned_text(phrases, text):
     output = []
     start = 0
     word_indices = []
@@ -315,6 +320,53 @@ def align_phrases_with_aligned_text(phrases, text, word_list):
             output.append([phrase,start,end])
             start = end
     return output
+
+def _find_end_index_random_text(phrase_text, text, start_index, end_index,
+    old_ndash):
+    if end_index < start_index + len(phrase_text):
+        end_index = start_index + len(phrase_text)
+    ndash = text[start_index:end_index].count('-')
+    end_index += (ndash - old_ndash)
+    if ndash > old_ndash: 
+        return _find_end_index_random_text(phrase_text,text,start_index,
+            end_index, ndash)
+    return end_index, ndash
+
+def align_phrases_with_randomized_aligned_text(phrases, text, aligned_text):
+    output = []
+    start = 0
+    start_aligned = 0
+    aligned_text = set_phrase_boundaries_to_space(phrases,text,aligned_text)
+    for i,phrase in enumerate(phrases):
+        pt = phrase_to_text(phrase)
+        end = start + len(pt)
+        ptr = text[start:end]
+        # print('ptr:',[ptr],start,end,len(ptr),i)
+        # print([aligned_text[start_aligned:start_aligned+len(ptr)]],start_aligned)
+        # end, ndash = _find_end_index_random_text(pt,text,start,start,0)
+        end_aligned = _find_end_index(ptr,aligned_text,start_aligned,start_aligned)
+        # print(pt)
+        # print(text[start:end], start, end, len(pt),len(text[start:end])) 
+        # print(aligned_text[start_aligned:end_aligned],start_aligned,end_aligned)
+        # ndash)
+        # print(' ')
+        output.append([phrase,start_aligned,end_aligned])
+        start_aligned = end_aligned +1
+        start = end +1
+    return output
+
+def align_phrases_with_random_text(phrases,text):
+    output = []
+    start = 0
+    start_aligned = 0
+    for phrase in phrases:
+        pt = phrase_to_text(phrase)
+        end = start + len(pt)
+        ptr = text[start:end]
+        output.append([phrase,pt,ptr, start, end])
+        start = end + 1
+    return output
+
 
 
 
@@ -419,6 +471,22 @@ def make_datasets(save = False):
         save_dataset(align_ds,'../align_ds.json')
     return phrase_ds, align_ds
 
+def make_randomized_text_datasets(save = False):
+    directory = cgn_align[:-1] + '_2/'
+    cgn_ids = [f.split('/')[-1] for f in glob.glob(directory +'fn*')]
+    phrase_ds = []
+    align_ds = []
+    for n in [None,2,4,8,16,32,64]:
+        print(n)
+        for cgn_id in cgn_ids:
+            align = Align(cgn_id, randomize = n)
+            phrase_ds.extend( phrases_to_dataset(align.phrases) )
+            align_ds.append( align_to_dataset_line(align) )
+    if save:
+        save_dataset(phrase_ds,'../phrase_randomized_text_ds.json')
+        save_dataset(align_ds,'../align_randomized_text_ds.json')
+    return phrase_ds, align_ds
+
 def cgn_component_names():
     d= {'a':'spontaneous dialogues','b':'interviews'}
     d.update({'c':'telephone dialogues','d':'telephone dialogues'})
@@ -485,5 +553,87 @@ def plot_delta_histogram(dstart, dend):
     plt.ylabel('phrase counts')
     
 
+def _make_index_mapping_aligned_text(aligned_text):
+    '''maps indices from not aligned text to aligned text.
+    aligned text contains - characters to align a text with another text
+    that containes more/differenct characters at a given location.
+    '''
+    output = []
+    no_underscore_index = 0
+    text_to_aligned = {}
+    aligned_to_text = {}
+    for i,char in enumerate(aligned_text):
+        if char == '-': continue
+        output.append({'aligned_text':i,'text':no_underscore_index})
+        text_to_aligned[no_underscore_index] = i
+        aligned_to_text[i] = no_underscore_index
+        no_underscore_index += 1
+    return output, aligned_to_text, text_to_aligned
+
+def set_phrase_boundaries_to_space(phrases, text, aligned_text):
+    '''phrase boundaries should be ' ' for the alignement procedure
+    with randomized text it can be non ' '
+    there for to align a phrase with the randomized text the phrase boundaries
+    need to be set to ' ' (this does not effect the randomized text /w2v 
+    alignment
+    this function sets the characters at the phrase boundary to ' '
+    '''
+    output = align_phrases_with_random_text(phrases, text)
+    o, at, ta = _make_index_mapping_aligned_text(aligned_text)
+    text_to_aligned = ta
+    aligned_text_list = list(aligned_text)
+    for line in output:
+        i = line[-1]
+        if i == len(text): continue
+        phrase_boundary_index_aligned = text_to_aligned[i]
+        # print(text[i],aligned_text[phrase_boundary_index_aligned],i)
+        aligned_text_list[phrase_boundary_index_aligned] = ' '
+        # print(aligned_text_list[phrase_boundary_index_aligned], phrase_boundary_index_aligned)
+        # print('+')
+    return ''.join(aligned_text_list)
+        
+        
+        
+    
+def _mv_error_random_align(align):
+    directory = '/'.join(align.align_filename.split('/')[:-1]) + '/'
+    old_directory = directory + 'OLD/'
+    if not os.path.isdir(old_directory): os.mkdir(old_directory)
+    cmd = 'mv ' + align.align_filename + ' ' + old_directory
+    os.system(cmd)
+
+def _check_old_dir(align):
+    directory = '/'.join(align.align_filename.split('/')[:-1]) + '/'
+    old_directory = directory + 'OLD/'
+    if not os.path.isdir(old_directory): os.mkdir(old_directory)
+    f = old_directory + align.cgn_id
+    print(f)
+    return os.path.isfile(f)
+    
+def _handle_error_align(cgn_id,n):
+    try: a = Align(cgn_id,randomize = n)
+    except:
+        print('fixing',cgn_id,n)
+        a = Align(cgn_id, randomize = n, make_phrases = False)
+        _mv_error_random_align(a)
+        a = Align(cgn_id, randomize = n, make_phrases = False)
+        _handle_error_align(cgn_id,n)
+    else:print(cgn_id,n,'ok')
+    
+def handle_all_error_align(n = []):
+    directory = cgn_align[:-1] + '_2/'
+    cgn_ids = [f.split('/')[-1] for f in glob.glob(directory +'fn*')]
+    random.shuffle(cgn_ids)
+    phrase_ds = []
+    align_ds = []
+    if not n:
+        randomizes =[2,4,8,16,32,64]
+    else: randomizes = n
+    random.shuffle(randomizes)
+    for n in randomizes:
+        print(n)
+        for cgn_id in cgn_ids:
+            _handle_error_align(cgn_id,n)
+        
 
 
