@@ -236,7 +236,7 @@ class Phrase:
         wav2vec= align.aligned_wav2vec_text[start:end]
         graphemes = align.wav2vec_aligned_graphemes_timestamps[start:end]
         self.aligned_cgn_text= cgn
-        self.cgn_text = cgn.replace('-','')
+        self.cgn_text = cgn.replace('-','').strip()
         self.aligned_wav2vec_text= wav2vec
         self.wav2vec_text = wav2vec.replace('-','')
         self.wav2vec_aligned_graphemes = graphemes
@@ -260,14 +260,16 @@ class Phrase:
 
     def alignment(self,delta = 0.5):
         if self.start_index == self.end_index == None: return 'bad'
-        text_ok = self.cgn_text == self.text
+        if not self.wav2vec_start_time and not self.wav2vec_end_time:
+            return 'bad'
+        self.text_ok = self.cgn_text == self.text
         d = delta
-        start_ok=equal_with_delta(self.start_time,self.wav2vec_start_time,d)
-        end_ok = equal_with_delta( self.end_time, self.wav2vec_end_time, d)
-        if start_ok and end_ok: return 'good'
-        if start_ok:  return 'start match'
-        if end_ok:  return 'end match'
-        if text_ok: return 'middle match'
+        self.start_ok=equal_with_delta(self.start_time,self.wav2vec_start_time,d)
+        self.end_ok = equal_with_delta( self.end_time, self.wav2vec_end_time, d)
+        if self.start_ok and self.end_ok: return 'good'
+        if self.start_ok:  return 'start match'
+        if self.end_ok:  return 'end match'
+        if self.text_ok: return 'middle match'
         return 'bad'
 
     @property
@@ -409,7 +411,7 @@ def extract_all_phrases(aligns):
         phrases.extend(align.phrases)
     return phrases
 
-def phrase_to_dataset_line(phrase, phrase_index):
+def phrase_to_dataset_line(phrase, phrase_index, randomize = None):
     p, a = phrase, phrase.align
     line = [phrase_index,a.cgn_id, a.duration, a.component,a.nspeakers]
     line.extend([p.start_index,p.end_index, p.nwords])
@@ -417,20 +419,22 @@ def phrase_to_dataset_line(phrase, phrase_index):
     line.extend([p.wav2vec_start_time,p.wav2vec_end_time])
     line.extend([p.alignment(),p.alignment(1),p.alignment(0.1)])
     line.append(p.match_perc)
+    line.append(randomize)
     return line
 
-def phrases_to_dataset(phrases):
+def phrases_to_dataset(phrases, randomize = None):
     ds = []
     for i,phrase in enumerate(phrases):
-        line = phrase_to_dataset_line(phrase,i)
+        line = phrase_to_dataset_line(phrase,i, randomize)
         ds.append(line)
     return ds
 
-def align_to_dataset_line(align):
+def align_to_dataset_line(align, randomize = None):
     a = align
     line = [a.cgn_id, a.duration, a.component, a.nspeakers]
     line.extend( [len(a.phrases), a.average_match_perc, a.perc_bad()] )
     line.extend( [a.perc_bad(1),a.perc_bad(0.1)] )
+    line.append(randomize)
     return line
 
 def save_dataset(ds,filename):
@@ -442,18 +446,25 @@ def load_dataset(filename):
         ds = json.load(fin)
     return ds
 
-def load_align_dataset():
+def load_align_dataset(randomized = False):
     header = 'cgn_id,duration,component,nspeakers,nphrases,avg_match_perc'
     header += ',perc_bad_0.5,perc_bad_1,perc_bad_0.1'
     header = header.split(',')
+    if randomized:
+        header.append('randomize')
+        return load_dataset('../align_randomized_text_ds.json'), header
     return load_dataset('../align_ds.json'), header
 
-def load_phrase_dataset():
+def load_phrase_dataset(randomized = False):
     header = 'phrase_index,cgn_id,audiofile_duration,component,nspeakers'
     header += ',start_index,end_index,nwords,phrase_duration,start_time'
     header += ',end_time,wav2vec_start_time,wav2vec_end_time'
     header += ',label_0.5,label_1,label_0.1,match_perc'
     header = header.split(',')
+    if randomized:
+        print('loading randomized')
+        header.append('randomize')
+        return load_dataset('../phrase_randomized_text_ds.json'), header
     return load_dataset('../phrase_ds.json'), header
     
 
@@ -464,7 +475,7 @@ def make_datasets(save = False):
     for i,cgn_id in enumerate(cgn_ids):
         print(cgn_id,i,len(cgn_id))
         align = Align(cgn_id)
-        phrase_ds.extend( phrases_to_dataset(align.phrases) )
+        phrase_ds.extend( phrases_to_dataset(align.phrases, ) )
         align_ds.append(align_to_dataset_line(align) )
     if save:
         save_dataset(phrase_ds,'../phrase_ds.json')
@@ -480,8 +491,8 @@ def make_randomized_text_datasets(save = False):
         print(n)
         for cgn_id in cgn_ids:
             align = Align(cgn_id, randomize = n)
-            phrase_ds.extend( phrases_to_dataset(align.phrases) )
-            align_ds.append( align_to_dataset_line(align) )
+            phrase_ds.extend( phrases_to_dataset(align.phrases, randomize=n) )
+            align_ds.append( align_to_dataset_line(align, randomize=n) )
     if save:
         save_dataset(phrase_ds,'../phrase_randomized_text_ds.json')
         save_dataset(align_ds,'../align_randomized_text_ds.json')
