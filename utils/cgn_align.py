@@ -136,6 +136,7 @@ class Align:
         
     def _set_phrases(self):
         phrases = sort_phrases(self.textgrid.phrases())
+        self.words = []
         if self.randomize:
             o = align_phrases_with_randomized_aligned_text(phrases,
                 self.awd_text, self.aligned_cgn_text)
@@ -145,6 +146,8 @@ class Align:
         self.phrases = []
         for phrase, start_index, end_index in o:
             p = Phrase(phrase,self,start_index, end_index)
+            if p.words:
+                self.words.extend(p.words)
             self.phrases.append(p)
             
     def alignment_labels(self, delta = .5):
@@ -210,6 +213,7 @@ class Phrase:
         self.start_index = start_index
         self.end_index = end_index
         self._set_info()
+        self._add_words()
 
     def __repr__(self):
         m = self.text[:18].ljust(21)
@@ -241,6 +245,14 @@ class Phrase:
         self.wav2vec_text = wav2vec.replace('-','')
         self.wav2vec_aligned_graphemes = graphemes
         self._set_wav2vec_timestamps()
+
+    def _add_words(self):
+        self.words = []
+        o = phrase_words(self)
+        for word_index,line in enumerate(o):
+            w, start, end = line
+            word = Word(w,word_index,start,end,self)
+            self.words.append(word)
 
     def _set_wav2vec_timestamps(self):
         self.wav2vec_start_time= None
@@ -289,6 +301,102 @@ class Phrase:
     @property
     def nchars(self):
         return len(self.text)
+
+class Word:
+    def __init__(self,word, word_index, start_index, end_index, phrase):
+        self.word = word
+        self.awd_word = word.awd_word
+        self.text = word.awd_word
+        self.start_time = self.word.start_time
+        self.end_time = self.word.end_time
+        self.word_index = word_index
+        self.start_index = start_index
+        self.end_index = end_index
+        self.phrase = phrase
+        self._set_info()
+
+    def __repr__(self):
+        m = self.awd_word + ' '+str(self.wav2vec_start_time) + ' - ' 
+        m += str(self.wav2vec_end_time) + ' | '
+        m += self.alignment()
+        return m
+
+    def _set_info(self):
+        if self.start_index == self.end_index == None: return
+        start, end = self.start_index, self.end_index
+        cgn = self.phrase.aligned_cgn_text[start:end]
+        wav2vec= self.phrase.aligned_wav2vec_text[start:end]
+        self.aligned_cgn_text= cgn
+        self.cgn_text = cgn.replace('-','').strip()
+        self.aligned_wav2vec_text= wav2vec
+        self.wav2vec_text = wav2vec.replace('-','')
+        self.wav2vec_start_time= None
+        self.wav2vec_end_time= None
+        if hasattr(self.phrase, 'wav2vec_aligned_graphemes'):
+            graphemes = self.phrase.wav2vec_aligned_graphemes[start:end]
+            self.wav2vec_aligned_graphemes = graphemes
+            self._set_wav2vec_timestamps()
+
+    def _set_wav2vec_timestamps(self):
+        for line in self.wav2vec_aligned_graphemes:
+            if len(line) == 3 and line[0] != ' ':
+                self.wav2vec_start_time= line[1]
+                break
+        for line in self.wav2vec_aligned_graphemes[::-1]:
+            if len(line) == 3 and line[0] != ' ':
+                self.wav2vec_end_time= line[-1]
+                break
+        if self.wav2vec_start_time == self.wav2vec_end_time == None:
+            self.wav2vec_timestamps_ok = False
+        else:
+            self.wav2vec_timestamps_ok = False
+
+    def alignment(self,delta = 0.25):
+        if self.start_index == self.end_index == None: return 'bad'
+        if not self.wav2vec_start_time or not self.wav2vec_end_time:
+            return 'bad'
+        self.text_ok = self.cgn_text == self.text
+        d = delta
+        self.start_ok=equal_with_delta(self.start_time,self.wav2vec_start_time,d)
+        self.end_ok = equal_with_delta( self.end_time, self.wav2vec_end_time, d)
+        if self.start_ok and self.end_ok: return 'good'
+        if self.start_ok:  return 'start match'
+        if self.end_ok:  return 'end match'
+        if self.text_ok: return 'middle match'
+        return 'bad'
+         
+
+    @property
+    def duration(self):
+        return self.end_time - self.start_time
+
+    @property
+    def nchars(self):
+        return len(self.text)
+
+    @property
+    def match_perc(self):
+        match = 0
+        nchar = len(self.aligned_cgn_text)
+        if nchar == 0: return 0
+        texts = zip(self.aligned_cgn_text,self.aligned_wav2vec_text)
+        for cgn_char,w2v_char in texts:
+            if cgn_char == w2v_char: match += 1
+        return round(match / nchar * 100,2)
+
+
+def phrase_words(phrase):
+    start = 0
+    output = []
+    for word in phrase.phrase:
+        w = word.awd_word
+        end = _find_end_index(w, phrase.aligned_cgn_text,start,start)
+        if not end:
+            output.append([word,None,None])
+        else:
+            output.append([word,start,end])
+            start = end 
+    return output
 
             
 def phrase_to_text(phrase):
@@ -411,6 +519,22 @@ def extract_all_phrases(aligns):
         phrases.extend(align.phrases)
     return phrases
 
+def word_to_dataset_line(word, word_index):
+    w, a = word, word.phrase.align
+    line = [word_index, a.cgn_id, a.duration, a.component,a.nspeakers]
+    line.extend([w.start_index,w.end_index, w.nchars])
+    line.extend([round(w.duration,2),w.start_time,w.end_time])
+    line.extend([w.wav2vec_start_time,w.wav2vec_end_time])
+    line.extend([w.alignment(), w.match_perc])
+    return line
+
+def words_to_dataset(words):
+    ds = []
+    for i,word in enumerate(words):
+        line = word_to_dataset_line(word,i)
+        ds.append(line)
+    return ds
+
 def phrase_to_dataset_line(phrase, phrase_index, randomize = None):
     p, a = phrase, phrase.align
     line = [phrase_index,a.cgn_id, a.duration, a.component,a.nspeakers]
@@ -446,6 +570,15 @@ def load_dataset(filename):
         ds = json.load(fin)
     return ds
 
+
+def load_word_dataset():
+    header = 'word_index,cgn_id,audiofile_duration,component,nspeakers'
+    header += ',start_index,end_index,nchars,word_duration,start_time'
+    header += ',end_time,wav2vec_start_time,wav2vec_end_time'
+    header += ',label_0.5,match_perc'
+    header = header.split(',')
+    return load_dataset('../word_ds.json'), header
+
 def load_align_dataset(randomized = False):
     header = 'cgn_id,duration,component,nspeakers,nphrases,avg_match_perc'
     header += ',perc_bad_0.5,perc_bad_1,perc_bad_0.1'
@@ -467,13 +600,24 @@ def load_phrase_dataset(randomized = False):
         return load_dataset('../phrase_randomized_text_ds.json'), header
     return load_dataset('../phrase_ds.json'), header
     
+def make_word_dataset(save = False):
+    cgn_ids = [f.split('/')[-1] for f in glob.glob(cgn_align +'fn*')]
+    word_ds = []
+    for i,cgn_id in enumerate(cgn_ids):
+        print(cgn_id,i,len(cgn_ids))
+        align = Align(cgn_id)
+        word_ds.extend( words_to_dataset(align.words ) )
+    if save:
+        save_dataset(word_ds,'../word_ds.json')
+    return word_ds
+    
 
 def make_datasets(save = False):
     cgn_ids = [f.split('/')[-1] for f in glob.glob(cgn_align +'fn*')]
     phrase_ds = []
     align_ds = []
     for i,cgn_id in enumerate(cgn_ids):
-        print(cgn_id,i,len(cgn_id))
+        print(cgn_id,i,len(cgn_ids))
         align = Align(cgn_id)
         phrase_ds.extend( phrases_to_dataset(align.phrases, ) )
         align_ds.append(align_to_dataset_line(align) )
@@ -532,6 +676,36 @@ def perc_bad_duration_plot(alpha = .2):
     plt.xlabel('audio duration in seconds')
     plt.ylabel('% incorrectly aligned phrases')
     return leg, component_names
+
+def get_all_speech_types():
+    d = {'spontaneous':'a,b,c,d,e,h'.split(',')}
+    d['prepared']='f,g,h,i,l,n'.split(',')
+    d['read'] = ['j','k','o']
+    return d
+
+def get_speech_type(component, speech_types):
+    for label, components in speech_types.items():
+        if component in components: return label
+    raise ValueError(component,'not found', speech_types)
+
+
+def multiple_regression_ds(ads,header):
+    di = header.index('duration')
+    si = header.index('nspeakers')
+    pi = header.index('perc_bad_0.5')
+    ci = header.index('component')
+    speech_type, duration, nspeakers, perc_bad,comps = [], [], [], [], []
+    speech_types = get_all_speech_types()
+    ds = []
+    for x in ads:
+        duration.append( x[di] )
+        nspeakers.append( x[si] )
+        speech_type.append( get_speech_type(x[ci], speech_types) )  
+        comps.append(x[ci])
+        perc_bad.append( x[pi] )
+        line = [x[pi],x[di],x[si],speech_type[-1]]
+        ds.append('\t'.join(map(str,line)))
+    return ds, perc_bad, duration, nspeakers, speech_type, comps
         
 
 def delta_start_delta_end_phrase_line(phrase_line, header):
@@ -553,7 +727,14 @@ def delta_start_delta_end_phrases_ds(phrase_ds, header):
         dend.append(e)
     return dstart, dend
 
-def plot_delta_histogram(dstart, dend):
+def delta_start_delta_end_word_ds(word_ds, header):
+    dstart, dend = delta_start_delta_end_phrases_ds(word_ds, header)
+    return dstart, dend
+
+def plot_delta_histogram_words(dstart,dend):
+    plot_delta_histogram(dstart, dend, ylabel = 'word counts')
+
+def plot_delta_histogram(dstart, dend, ylabel = 'phrase counts'):
     s = [x for x in dstart if x < 1 and x > -1]
     e = [x for x in dend if x < 1 and x > -1]
     plt.figure()
@@ -561,7 +742,7 @@ def plot_delta_histogram(dstart, dend):
     plt.hist(e,bins=100,alpha = 0.5,color='red')
     plt.legend(['start delta','end delta'])
     plt.xlabel('seconds')
-    plt.ylabel('phrase counts')
+    plt.ylabel(ylabel)
     
 
 def _make_index_mapping_aligned_text(aligned_text):
