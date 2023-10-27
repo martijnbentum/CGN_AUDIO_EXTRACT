@@ -8,7 +8,7 @@ MALD words.
 '''
 
 import glob
-import to_vectors
+from utils import to_vectors
 
 
 input_directory = '/vol/tensusers/mbentum/variable_stress_syllable/wav_16khz/'
