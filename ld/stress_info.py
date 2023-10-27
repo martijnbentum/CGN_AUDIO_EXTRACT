@@ -1,6 +1,8 @@
 from utils import locations
 from utils import audio
+import numpy as np
 import pickle
+from ld import time_index
 
 float_columns='start_time,end_time,vowel_start_time,vowel_end_time'.split(',')
 
@@ -69,5 +71,38 @@ class Syllable:
     def word_duration(self):
         return self.sox_info['duration']
             
+    @property
+    def start_end_index(self):
+        return time_index.time_slice_to_index_slice(
+            self.start_time, self.end_time)
+
+    @property
+    def start_end_index_time(self):
+        return time_index.index_slice_to_time_slice(
+            *self.start_end_index)
+
+    @property
+    def start_end_time(self):
+        return self.start_time, self.end_time
+
+    @property
+    def syllable_feature_vectors(self):
+        if hasattr(self,'_syllable_feature_vectors'):
+            return self._syllable_feature_vectors
+        feature_vectors = self.pretrain_vectors.extract_features[0].numpy()
+        start_index, end_index = self.start_end_index
+        self._syllable_feature_vectors = feature_vectors[start_index:end_index]
+        return self._syllable_feature_vectors
+
+
+    @property
+    def syllable_mean_feature_vector(self):
+        if hasattr(self,'_syllable_mean_feature_vector'):
+            return self._syllable_mean_feature_vector
+        temp = np.mean(self.syllable_feature_vectors, axis=0)
+        self._syllable_mean_feature_vector = temp
+        return self._syllable_mean_feature_vector
+    
+
         
 
