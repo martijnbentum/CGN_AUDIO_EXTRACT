@@ -22,3 +22,12 @@ kl_audio_dir = '/vol/tensusers3/mbentum/KL_AUDIOS/'
 cache_dir = '../WAV2VEC_DATA/'
 perceptron_dir = '../PERCEPTRONS/'
 
+# ld
+ld_base = '/vol/tensusers/mbentum/INDEEP/LD/'
+mald_variable_stress = ld_base + 'mald_variable_stress_syllable/'
+mald_variable_stress_wav = mald_variable_stress + 'wav_16khz/'
+mald_variable_stress_pretrain_vectors = mald_variable_stress 
+mald_variable_stress_pretrain_vectors += 'pretrain_wav2vec_vectors/'
+mald_variable_stress_info = mald_variable_stress 
+mald_variable_stress_info += 'mald_variable_stress_syllable.tsv'
+
