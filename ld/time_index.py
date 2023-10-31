@@ -40,7 +40,7 @@ def time_slice_to_index_slice(start_time,end_time, frame_duration = 0.02):
     duration = end_time - start_time
     # if the duration of the time slice is shorter than the frame duration
     # the index slice will not be contained witin the time slice
-    if duration > frame_duration:
+    if duration > frame_duration * 1.5:
         # if duration is longer than frame duration
         # the check_start should be later or equal than the start time
         # and the check_end should be earlier or equal than the end time
