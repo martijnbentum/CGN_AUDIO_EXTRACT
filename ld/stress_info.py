@@ -27,6 +27,15 @@ class Info:
         self.data = temp[1:]
         self.syllables = [Syllable(x, self.header,self) for x in self.data]
 
+    def xy(self, layer='cnn'):
+        if hasattr(self, '_xy'):
+            return self._xy
+        X = np.array([x.X for x in self.syllables])
+        y = np.array([x.y for x in self.syllables])
+        self._xy = X,y
+        return self._xy
+        
+
 
 class Syllable:
     def __init__(self, line, header, info):
@@ -38,6 +47,7 @@ class Syllable:
     def _set_info(self):
         for name, value in zip(self.header, self.line):
             if name in float_columns: value = float(value)
+            if name == 'stressed': value = value == 'True'
             setattr(self,name,value)
         self.name = self.word_audio_filename.split('.')[0]
 
@@ -86,23 +96,50 @@ class Syllable:
         return self.start_time, self.end_time
 
     @property
-    def syllable_feature_vectors(self):
-        if hasattr(self,'_syllable_feature_vectors'):
-            return self._syllable_feature_vectors
-        feature_vectors = self.pretrain_vectors.extract_features[0].numpy()
-        start_index, end_index = self.start_end_index
-        self._syllable_feature_vectors = feature_vectors[start_index:end_index]
-        return self._syllable_feature_vectors
-
+    def vowel_start_end_index(self):
+        return time_index.time_slice_to_index_slice(
+            self.vowel_start_time, self.vowel_end_time)
 
     @property
-    def syllable_mean_feature_vector(self):
-        if hasattr(self,'_syllable_mean_feature_vector'):
-            return self._syllable_mean_feature_vector
-        temp = np.mean(self.syllable_feature_vectors, axis=0)
-        self._syllable_mean_feature_vector = temp
-        return self._syllable_mean_feature_vector
+    def vowel_start_end_index_time(self):
+        return time_index.index_slice_to_time_slice(
+            *self.vowel_start_end_index)
+
+    @property
+    def vowel_start_end_time(self):
+        return self.vowel_start_time, self.vowel_end_time
+
+    def _get_feature_vectors(self, layer = 'cnn'):
+        if layer == 'cnn':
+            return self.pretrain_vectors.extract_features[0].numpy()
+        if type(layer) != int:
+            raise ValueError('layer must be layer index or "cnn"')
+        return self.pretrain_vectors.hidden_states[layer][0].numpy()
+
+    def feature_vectors(self, layer = 'cnn', section = 'syllable'):
+        feature_vectors = self._get_feature_vectors(layer)
+        if section == 'syllable':
+            start_index, end_index = self.start_end_index
+        elif section == 'vowel':
+            start_index, end_index = self.vowel_start_end_index
+        elif section == 'word':
+            start_index, end_index = 0, feature_vectors.shape[0]
+        return feature_vectors[start_index:end_index]
+
+    def mean_feature_vector(self, layer = 'cnn', section = 'syllable'):
+        attr_name = '_' + section + '_mean_feature_vector_' + str(layer)
+        if hasattr(self,attr_name):
+            return getattr(self,attr_name)
+        temp = np.mean(self.feature_vectors(layer, section), axis=0)
+        setattr(self, attr_name, temp)
+        return getattr(self,attr_name)
     
+    def X(self, layer = 'cnn'):
+        return self.syllable_mean_feature_vector(layer)
+
+    @property
+    def y(self):
+        return int(self.stressed)
 
         
 
