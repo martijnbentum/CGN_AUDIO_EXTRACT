@@ -1,31 +1,40 @@
 from sklearn.metrics import matthews_corrcoef, accuracy_score
 from sklearn.metrics import classification_report
 from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split
 import json
-import numpy as np
 from utils import locations
+import numpy as np
+import os
+import pickle
 
 layers = ['cnn',1,6,12,18,21,24]
+sections = ['vowel', 'syllable', 'word']
 
-def train_classifiers(stress_info, name = '', layers = layers):
-    '''train mlp classifiers based on the data structure hidden_states.'''
+def train_classifier(stress_info, name , layer, section, overwrite = False):
     if name: name = '_' + name
-    for section in ['vowel','syllable','word']:
-        for layer in layers:
-            f=locations.stress_perceptron_dir + 'clf' + name + '_' + section   
-            f+= '_' + str(layer) + '.pickle'
-            if os.path.isfile(f):
-                print(f, 'already exists, skipping')
-                continue
-            print('starting on',f)
-            X, y = hidden_states.to_dataset(layer)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, 
-                stratify=y,random_state=1)
-            clf = MLPClassifier(random_state=1, max_iter=300).fit(X_train, y_train)
-            hyp = clf.predict(X_test)
-            save_performance(y_test, hyp, name, layer, section)
-            with open(f, 'wb') as fout:
-                pickle.dump(clf,fout)
+    f=locations.stress_perceptron_dir + 'clf' + name + '_' + section   
+    f+= '_' + str(layer) + '.pickle'
+    if os.path.isfile(f) and not overwrite:
+        print(f, 'already exists, skipping')
+        return
+    print('starting on',f)
+    X, y = stress_info.xy(layer = layer, section = section)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, 
+        stratify=y,random_state=1)
+    clf=MLPClassifier(random_state=1,max_iter=300)
+    clf.fit(X_train, y_train)
+    hyp = clf.predict(X_test)
+    save_performance(y_test, hyp, name, layer, section)
+    with open(f, 'wb') as fout:
+        pickle.dump(clf,fout)
+
+def train_classifiers(stress_info, name = '', layers = layers, 
+    sections = sections):
+    '''train mlp classifiers based on the data structure hidden_states.'''
+    for layer in layers:
+        for section in sections:
+            train_classifier(stress_info, name, layer, section)
 
 def save_performance(gt, hyp, name, layer, section):
     d = {}
