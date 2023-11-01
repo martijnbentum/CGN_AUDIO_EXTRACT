@@ -27,13 +27,14 @@ class Info:
         self.data = temp[1:]
         self.syllables = [Syllable(x, self.header,self) for x in self.data]
 
-    def xy(self, layer='cnn'):
-        if hasattr(self, '_xy'):
-            return self._xy
-        X = np.array([x.X for x in self.syllables])
+    def xy(self, layer='cnn', section = 'syllable'):
+        attr_name = '_xy_' + section + '_' + str(layer)
+        if hasattr(self, attr_name):
+            return getattr(self, attr_name)
+        X = np.array([x.X(layer, section) for x in self.syllables])
         y = np.array([x.y for x in self.syllables])
-        self._xy = X,y
-        return self._xy
+        setattr(self, attr_name, (X,y))
+        return getattr(self, attr_name)
         
 
 
@@ -134,8 +135,8 @@ class Syllable:
         setattr(self, attr_name, temp)
         return getattr(self,attr_name)
     
-    def X(self, layer = 'cnn'):
-        return self.syllable_mean_feature_vector(layer)
+    def X(self, layer = 'cnn', section = 'syllable'):
+        return self.mean_feature_vector(layer, section)
 
     @property
     def y(self):
