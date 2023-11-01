@@ -1,12 +1,14 @@
-from sklearn.metrics import matthews_corrcoef, accuracy_score
-from sklearn.metrics import classification_report
-from sklearn.neural_network import MLPClassifier
-from sklearn.model_selection import train_test_split
+import glob
 import json
 from utils import locations
 import numpy as np
 import os
 import pickle
+from sklearn.metrics import matthews_corrcoef, accuracy_score
+from sklearn.metrics import classification_report
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split
+from matplotlib import pyplot as plt
 
 layers = ['cnn',1,6,12,18,21,24]
 sections = ['vowel', 'syllable', 'word']
@@ -51,6 +53,7 @@ def save_performance(gt, hyp, name, layer, section):
         json.dump(d, fout)
     return d
 
+
 class Perceptron:
     '''class to hold layer specific classifiers.'''
     def __init__(self, filename = None, layers = layers):
@@ -58,3 +61,49 @@ class Perceptron:
         self.filename = filename
         c = [load_perceptron(l,small,ctc, filename) for l in layers]
         self.classifiers = c
+
+
+def score_filename_to_layer_section(f):
+    layer = f.split('_')[-2]
+    section = f.split('_')[-1].split('.')[0]
+    return layer, section
+
+
+def get_scores(name, layer = '*', section = '*'):
+    f = locations.stress_perceptron_dir + 'score_' + name 
+    f +=  '_' + str(layer) +'_'+ section + '.json'
+    fn = glob.glob(f)
+    output = {}
+    for f in fn:
+        layer, section = score_filename_to_layer_section(f)
+        with open(f, 'r') as fin:
+            d = json.load(fin)
+        output[layer,section] = d
+    return output
+
+def show_scores(name, section):
+    f = locations.stress_perceptron_dir + 'score_' + name 
+    f +=  '_*_'+ section + '.json'
+    fn = glob.glob(f)
+    for f in fn:
+        print(f)
+        with open(f, 'r') as fin:
+            d = json.load(fin)
+        print('mcc', d['mcc'])
+        print('---')
+
+def plot_scores(name = 'mald-variable-stress-small-pretrained'):
+    scores= get_scores(name)
+    mcc_vowel= [scores[str(layer),'vowel']['mcc'] for layer in layers]
+    mcc_syllable= [scores[str(layer),'syllable']['mcc'] for layer in layers]
+    mcc_word = [scores[str(layer),'word']['mcc'] for layer in layers]
+    plt.clf()
+    plt.plot(mcc_vowel, label = 'vowel')
+    plt.plot(mcc_syllable, label = 'syllable')
+    plt.plot(mcc_word, label = 'word')
+    plt.legend()
+    plt.grid(alpha = 0.3)
+    plt.xticks(range(len(layers)), layers)
+    plt.xlabel('wav2vec 2.0 layer')
+    plt.ylabel('matthews correlation coefficient')
+    plt.show()
