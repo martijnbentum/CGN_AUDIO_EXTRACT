@@ -14,9 +14,10 @@ layers = ['cnn',1,6,12,18,21,24]
 sections = ['vowel', 'syllable', 'word']
 
 def train_classifier(stress_info, name , layer, section, overwrite = False,
-    random_gt = False):
+    random_gt = False, occlusion_type = None):
     if name: name = '_' + name
     if random_gt: name += '-random-gt'
+    if occlusion_type: name += '-occlusion-' + occlusion_type
     f=locations.stress_perceptron_dir + 'clf' + name + '_' + section   
     f+= '_' + str(layer) + '.pickle'
     if os.path.isfile(f) and not overwrite:
@@ -24,7 +25,7 @@ def train_classifier(stress_info, name , layer, section, overwrite = False,
         return
     print('starting on',f)
     X, y = stress_info.xy(layer = layer, section = section, 
-        random_gt = random_gt)
+        random_gt = random_gt, occlusion_type = occlusion_type)
     X_train, X_test, y_train, y_test = train_test_split(X, y, 
         stratify=y,random_state=1)
     clf=MLPClassifier(random_state=1,max_iter=300)
@@ -35,12 +36,12 @@ def train_classifier(stress_info, name , layer, section, overwrite = False,
         pickle.dump(clf,fout)
 
 def train_classifiers(stress_info, name = '', layers = layers, 
-    sections = sections, random_gt = False):
+    sections = sections, random_gt = False, occlusion_type = None):
     '''train mlp classifiers based on the data structure hidden_states.'''
     for layer in layers:
         for section in sections:
             train_classifier(stress_info, name, layer, section, 
-                random_gt = random_gt)
+                random_gt = random_gt, occlusion_type = occlusion_type)
 
 def save_performance(gt, hyp, name, layer, section):
     d = {}
@@ -73,12 +74,14 @@ def score_filename_to_layer_section(f):
     return layer, section
 
 
-def get_scores(name, layer = '*', section = '*'):
+def get_scores(name, layer = '*', section = '*', occlusion = False):
     f = locations.stress_perceptron_dir + 'score_' + name 
+    if occlusion: f += '-occlusion*'
     f +=  '_' + str(layer) +'_'+ section + '.json'
     fn = glob.glob(f)
     output = {}
     for f in fn:
+        print(f)
         layer, section = score_filename_to_layer_section(f)
         with open(f, 'r') as fin:
             d = json.load(fin)
@@ -96,16 +99,20 @@ def show_scores(name, section):
         print('mcc', d['mcc'])
         print('---')
 
-def plot_scores(name = 'mald-variable-stress-small-pretrained'):
-    scores= get_scores(name)
+def plot_scores(name = 'mald-variable-stress-small-pretrained', 
+    occlusion =False):
+    scores= get_scores(name, occlusion = occlusion)
+    print(scores.keys())
     mcc_vowel= [scores[str(layer),'vowel']['mcc'] for layer in layers]
     mcc_syllable= [scores[str(layer),'syllable']['mcc'] for layer in layers]
-    mcc_word = [scores[str(layer),'word']['mcc'] for layer in layers]
+    if not occlusion:
+        mcc_word = [scores[str(layer),'word']['mcc'] for layer in layers]
     plt.clf()
     plt.ylim(-0.1,1)
     plt.plot(mcc_vowel, label = 'vowel')
     plt.plot(mcc_syllable, label = 'syllable')
-    plt.plot(mcc_word, label = 'word')
+    if not occlusion:
+        plt.plot(mcc_word, label = 'word')
     plt.legend()
     plt.grid(alpha = 0.3)
     plt.xticks(range(len(layers)), layers)
