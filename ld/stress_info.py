@@ -2,6 +2,7 @@ from utils import locations
 from utils import audio
 import numpy as np
 import pickle
+import random
 from ld import time_index
 
 float_columns='start_time,end_time,vowel_start_time,vowel_end_time'.split(',')
@@ -27,12 +28,12 @@ class Info:
         self.data = temp[1:]
         self.syllables = [Syllable(x, self.header,self) for x in self.data]
 
-    def xy(self, layer='cnn', section = 'syllable'):
+    def xy(self, layer='cnn', section = 'syllable', random_gt = False):
         attr_name = '_xy_' + section + '_' + str(layer)
         if hasattr(self, attr_name):
             return getattr(self, attr_name)
         X = np.array([x.X(layer, section) for x in self.syllables])
-        y = np.array([x.y for x in self.syllables])
+        y = np.array([x.y(random_gt) for x in self.syllables])
         setattr(self, attr_name, (X,y))
         return getattr(self, attr_name)
         
@@ -138,8 +139,8 @@ class Syllable:
     def X(self, layer = 'cnn', section = 'syllable'):
         return self.mean_feature_vector(layer, section)
 
-    @property
-    def y(self):
+    def y(self, random_gt = False):
+        if random_gt: return random.randint(0,1)
         return int(self.stressed)
 
         
