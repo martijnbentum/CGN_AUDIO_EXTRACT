@@ -13,15 +13,18 @@ from matplotlib import pyplot as plt
 layers = ['cnn',1,6,12,18,21,24]
 sections = ['vowel', 'syllable', 'word']
 
-def train_classifier(stress_info, name , layer, section, overwrite = False):
+def train_classifier(stress_info, name , layer, section, overwrite = False,
+    random_gt = False):
     if name: name = '_' + name
+    if random_gt: name += '-random-gt'
     f=locations.stress_perceptron_dir + 'clf' + name + '_' + section   
     f+= '_' + str(layer) + '.pickle'
     if os.path.isfile(f) and not overwrite:
         print(f, 'already exists, skipping')
         return
     print('starting on',f)
-    X, y = stress_info.xy(layer = layer, section = section)
+    X, y = stress_info.xy(layer = layer, section = section, 
+        random_gt = random_gt)
     X_train, X_test, y_train, y_test = train_test_split(X, y, 
         stratify=y,random_state=1)
     clf=MLPClassifier(random_state=1,max_iter=300)
@@ -32,11 +35,12 @@ def train_classifier(stress_info, name , layer, section, overwrite = False):
         pickle.dump(clf,fout)
 
 def train_classifiers(stress_info, name = '', layers = layers, 
-    sections = sections):
+    sections = sections, random_gt = False):
     '''train mlp classifiers based on the data structure hidden_states.'''
     for layer in layers:
         for section in sections:
-            train_classifier(stress_info, name, layer, section)
+            train_classifier(stress_info, name, layer, section, 
+                random_gt = random_gt)
 
 def save_performance(gt, hyp, name, layer, section):
     d = {}
@@ -98,6 +102,7 @@ def plot_scores(name = 'mald-variable-stress-small-pretrained'):
     mcc_syllable= [scores[str(layer),'syllable']['mcc'] for layer in layers]
     mcc_word = [scores[str(layer),'word']['mcc'] for layer in layers]
     plt.clf()
+    plt.ylim(-0.1,1)
     plt.plot(mcc_vowel, label = 'vowel')
     plt.plot(mcc_syllable, label = 'syllable')
     plt.plot(mcc_word, label = 'word')
