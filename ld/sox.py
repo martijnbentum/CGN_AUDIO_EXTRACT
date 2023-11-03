@@ -21,6 +21,7 @@ def occlude_other(input_filename, output_filename, start_time, end_time):
     extract_section(input_filename, temp_filename, start_time, end_time)
     start_silence = start_time
     end_silence = d['duration'] - end_time
+    if end_silence< 0.001: end_silence = 0
     add_silence(temp_filename, output_filename, start_silence, end_silence)
     os.remove(temp_filename)
 
