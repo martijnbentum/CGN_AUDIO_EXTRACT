@@ -3,6 +3,7 @@ from utils import audio
 import numpy as np
 import pickle
 import random
+from ld import sox
 from ld import time_index
 
 float_columns='start_time,end_time,vowel_start_time,vowel_end_time'.split(',')
@@ -144,4 +145,23 @@ class Syllable:
         return int(self.stressed)
 
         
+def occlude_except_syllable(syllable):
+    s = syllable
+    name = s.word_audio_filename
+    input_filename = locations.mald_variable_stress_wav + name
+    output_dir = locations.mald_variable_stress_occlusions_wav
+    output_filename = output_dir + name.replace('.wav', '_only_syllable.wav')
+    print(input_filename,output_filename,s.start_time,s.end_time)
+    sox.occlude_other(input_filename, output_filename, s.start_time, s.end_time)
+
+
+def occlude_except_vowel(syllable):
+    s = syllable
+    name = s.word_audio_filename
+    start_time, end_time = s.vowel_start_time, s.vowel_end_time
+    input_filename = locations.mald_variable_stress_wav + name
+    output_dir = locations.mald_variable_stress_occlusions_wav
+    output_filename = output_dir + name.replace('.wav', '_only_vowel.wav')
+    print(input_filename,output_filename,start_time,end_time)
+    sox.occlude_other(input_filename, output_filename, start_time, end_time)
 
