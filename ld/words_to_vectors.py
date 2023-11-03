@@ -8,29 +8,34 @@ MALD words.
 '''
 
 import glob
-from utils import to_vectors
 from utils import locations
+from utils import to_vectors
+import pickle
 
 input_directory = locations.mald_variable_stress_wav
 output_directory = locations.mald_variable_stress_pretrain_vectors
+
+occlusion_input_dir= locations.mald_variable_stress_occlusions_wav
+occlusion_output_dir=locations.mald_variable_stress_occlusions_pretrain_vectors
 
 def get_name(filename):
     '''remove directory and extension from filename'''
     return filename.split('/')[-1].split('.')[0]
 
 def all_audio_files_to_pretrain_vectors(input_directory = input_directory, 
-    output_directory = output_directory, processor = None, model = None):
+    output_directory = output_directory, processor = None, model = None,
+    end_filename = ''):
     '''uses pretrained model to convert audio files to vectors'''
     if not processor:
         processor, model = to_vectors.load_pretrained_model()
-    files = glob.glob(directory + '*.wav')
+    files = glob.glob(input_directory + '*' + end_filename + '.wav')
     for f in files:
-        audio_file_to_vector(f, processor, model)
+        audio_file_to_vector(f, processor, model, output_directory)
 
 def audio_file_to_vector(filename, processor, model, output_directory = ''):
     '''converts audio file to vectors and saves them to a pickle file'''
     print('handling file: ' + filename)
-    name = get_filename(filename)
+    name = get_name(filename)
     output = to_vectors.audio_to_pretrained_outputs(
         filename,processor = processor, model = model)
     pickle.dump(output, open(output_directory + name + '.pickle', 'wb'))
