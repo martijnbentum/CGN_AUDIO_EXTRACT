@@ -26,8 +26,14 @@ perceptron_dir = '../PERCEPTRONS/'
 ld_base = '/vol/tensusers/mbentum/INDEEP/LD/'
 mald_variable_stress = ld_base + 'mald_variable_stress_syllable/'
 mald_variable_stress_wav = mald_variable_stress + 'wav_16khz/'
+mald_variable_stress_occlusions_wav = mald_variable_stress 
+mald_variable_stress_occlusions_wav += 'occlusions_wav_16khz/'
 mald_variable_stress_pretrain_vectors = mald_variable_stress 
 mald_variable_stress_pretrain_vectors += 'pretrain_wav2vec_vectors/'
+mald_variable_stress_occlusions_pretrain_vectors = mald_variable_stress
+mald_variable_stress_occlusions_pretrain_vectors += 'occlusions_pretrain'
+mald_variable_stress_occlusions_pretrain_vectors += '_wav2vec_vectors/'
+
 mald_variable_stress_info = mald_variable_stress 
 mald_variable_stress_info += 'mald_variable_stress_syllable.tsv'
 
