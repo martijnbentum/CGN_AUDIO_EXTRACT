@@ -39,3 +39,5 @@ mald_variable_stress_info += 'mald_variable_stress_syllable.tsv'
 
 stress_perceptron_dir = ld_base + 'PERCEPTRONS/'
 
+
+codebook_indices_dir = '../CODEBOOK_INDICES/'
