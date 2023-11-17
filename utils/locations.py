@@ -41,3 +41,5 @@ stress_perceptron_dir = ld_base + 'PERCEPTRONS/'
 
 
 codebook_indices_dir = '../CODEBOOK_INDICES/'
+codebook_indices_phone_counts_dir = '../CODEBOOK_INDICES'
+codebook_indices_phone_counts_dir += '_PHONE_COUNTS/'
