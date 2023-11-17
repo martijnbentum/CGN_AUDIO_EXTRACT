@@ -9,6 +9,12 @@ def overlap(s1,e1,s2,e2, strict = False):
     if s1 >= e2 and e1 >= e2: return False
     return True
 
+def overlap_duration(s1,e1,s2,e2):
+    max_start = max(s1,s2)
+    min_end = min(e1,e2)
+    duration = min_end - max_start
+    return duration
+
 
 class TestOverlap(unittest.TestCase):
     def test_true_overlap(self):
