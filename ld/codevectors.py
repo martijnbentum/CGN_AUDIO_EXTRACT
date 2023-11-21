@@ -1,10 +1,12 @@
 from . import awd
+import copy
 import glob
 import json
 import numpy as np
 import pickle
 from utils import locations
 from utils import general
+from utils import phonemes
 
 fn = glob.glob(locations.codebook_indices_dir + '*.npy')
 
@@ -139,10 +141,11 @@ def dict_to_sorted_dict(d):
     return dict(sorted(d.items(), key=lambda item: item[1], reverse=True))
 
 def count_dict_to_probability_dict(d):
+    od = copy.copy(d)
     total = sum(d.values())
     for key in d.keys():
-        d[key] /= total
-    return d
+        od[key] /= total
+    return od
 
 def frames_to_count_dict(frames, save = False):
     key = frames[0].key
@@ -155,10 +158,110 @@ def frames_to_count_dict(frames, save = False):
     return d
 
     
+def load_count_dict(filename):
+    d = json.load(open(filename))
+    od ={}
+    for key in d.keys():
+        if key[0] == '!': continue
+        if key == '[]': continue
+        od[key] = d[key]
+    return od
 
+
+def load_all_count_dicts():
+    path = locations.codebook_indices_phone_counts_dir + '*.json'
+    filenames = glob.glob(path)
+    return dict([[f, load_count_dict(f)] for f in filenames])
+
+def _get_all_phonemes(count_dicts):
+    d = count_dicts
+    p = []
+    for v in d.values():
+        for k in v.keys():
+            if k not in p: p.append(k)
+    return p
+
+def create_phoneme_codevector_counts(p, d):
+    output_dict = {}
+    for phoneme in p:
+        output_dict[phoneme] = {}
+        for codevector_filename, phoneme_count_dict in d.items():
+            name = codevector_json_filename_to_name(codevector_filename)
+            if phoneme not in phoneme_count_dict.keys(): phoneme_count = 0
+            else: phoneme_count = phoneme_count_dict[phoneme]
+            output_dict[phoneme][name] = phoneme_count
+    return output_dict
+        
+        
+
+def codevector_json_filename_to_name(filename):
+    name = filename.split('/')[-1].split('.')[0]
+    return name
+    
+def create_matrix_codevector_counts(p, d):
+    rows, columns = len(p), len(d['silence'])
+    m = np.zeros((rows, columns))
+    for i, phoneme in enumerate(p):
+        codevector_counts = d[phoneme]
+        ccp = codevector_counts
+        # ccp = count_dict_to_probability_dict(codevector_counts)
+        for j, phoneme_prob in enumerate(sorted(ccp.values())):
+            m[i,j] = phoneme_prob
+    return m
+
+def create_matrix_phoneme_counts(p, d):
+    rows, columns = len(p), len(d)
+    m = np.zeros((rows, columns))
+    for i, phoneme in enumerate(p):
+        for j, codevector_phoneme_counts in enumerate(d.values()):
+            # cpp = count_dict_to_probability_dict(codevector_phoneme_counts)
+            cpp = codevector_phoneme_counts
+            if phoneme not in cpp.keys():
+                m[i,j] = 0
+                continue
+            m[i,j] = cpp[phoneme]
+    return m
+            
+
+def plot_codevectors():
+    d = load_all_count_dicts()
+    p = _get_all_phonemes(d)
+    plt.ion()
+    fig, ax = plt.subplots(8,8)
+    ax.matshow(m, aspect = 150)
 
 def sort_probability_dict(d):
     o = (sorted(d.items(), key=lambda item: list(item[1].keys())[0], 
         reverse=True))
     return dict(o)
+
+
+def find_indices_of_high_codevectors(phoneme,pcd):
+    pass
+    '''
+    indices = []
+    for i, codevector_counts in enumerate(pcd[phoneme]):
+        ccp = count_dict_to_probability_dict(codevector_counts)
+        
+            indices.append(i)
+    return indices
+    '''
+
+def compute_phoneme_pdf(d):
+    output_d = {}
+    p = _get_all_phonemes(d)
+    m = create_matrix_phoneme_counts(p, d)
+    all_count = np.sum(m)
+    for i,phoneme in enumerate(p):
+        output_d[phoneme] = np.sum(m[i]) / all_count
+    return output_d
+
+def compute_codevector_pdf(d):
+    output_d = {}
+    p = _get_all_phonemes(d)
+    m = create_matrix_codevector_counts(p, d)
+    all_count = np.sum(m)
+    for i,phoneme in enumerate(p):
+        output_d[phoneme] = np.sum(m[i]) / all_count
+    return output_d
 
