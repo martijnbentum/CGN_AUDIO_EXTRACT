@@ -34,6 +34,9 @@ mald_variable_stress_occlusions_pretrain_vectors = mald_variable_stress
 mald_variable_stress_occlusions_pretrain_vectors += 'occlusions_pretrain'
 mald_variable_stress_occlusions_pretrain_vectors += '_wav2vec_vectors/'
 
+mald_word_recordings = ld_base + 'MALD/recordings/words/'
+mald_pretrain_vectors = ld_base + 'MALD/pretrain_wav2vec_vectors/'
+
 mald_variable_stress_info = mald_variable_stress 
 mald_variable_stress_info += 'mald_variable_stress_syllable.tsv'
 
