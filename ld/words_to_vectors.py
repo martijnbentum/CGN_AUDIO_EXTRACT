@@ -32,6 +32,15 @@ def all_audio_files_to_pretrain_vectors(input_directory = input_directory,
     for f in files:
         audio_file_to_vector(f, processor, model, output_directory)
 
+def all_mald_audio_files_to_pretrain_vectors(processor = None, model = None):
+    if not processor:
+        processor, model = to_vectors.load_pretrained_model()
+    input_directory = locations.mald_word_recordings
+    output_directory = locations.mald_pretrain_vectors
+    all_audio_files_to_pretrain_vectors(input_directory, output_directory,
+        processor, model)
+    
+
 def audio_file_to_vector(filename, processor, model, output_directory = ''):
     '''converts audio file to vectors and saves them to a pickle file'''
     print('handling file: ' + filename)
