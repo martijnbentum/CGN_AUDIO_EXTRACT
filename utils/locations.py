@@ -36,9 +36,11 @@ mald_variable_stress_occlusions_pretrain_vectors += '_wav2vec_vectors/'
 
 mald_word_recordings = ld_base + 'MALD/recordings/words/'
 mald_pretrain_vectors = ld_base + 'MALD/pretrain_wav2vec_vectors/'
+mald_code_vector_indices = ld_base + 'MALD/codevector_indices/'
 
 mald_variable_stress_info = mald_variable_stress 
 mald_variable_stress_info += 'mald_variable_stress_syllable.tsv'
+
 
 stress_perceptron_dir = ld_base + 'PERCEPTRONS/'
 
