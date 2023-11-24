@@ -1,10 +1,13 @@
-from utils import audio
-from utils import locations
-from utils import to_vectors
+import glob
 import numpy as np
+import os
+import pickle
 from transformers import Wav2Vec2ForPreTraining as pt
 from transformers import Wav2Vec2Processor 
 from transformers import Wav2Vec2Model
+from utils import audio
+from utils import locations
+from utils import to_vectors
 
 repo_dir = '/vol/tensusers/mbentum/CGN_AUDIO_EXTRACT/repo/'
 default_checkpoint = repo_dir + 'o_first_test/checkpoint-6300'
@@ -12,19 +15,36 @@ default_checkpoint = repo_dir + 'o_first_test/checkpoint-6300'
 pretrained_small="facebook/wav2vec2-xls-r-300m"
 pretrained_big ="facebook/wav2vec2-xls-r-2b"
 
+def all_mald_words_to_codebook_indices(model_pt = None, save = True, 
+    overwrite = False):
+    if not model_pt:
+        _, _, model_pt = load_pretrained_processor_model()
+    fn = glob.glob(locations.mald_pretrain_vectors + '*.pickle')
+    for f in fn:
+        print(f)
+        output_f = f.split('/')[-1].split('.pickle')[0]
+        output_f = locations.mald_code_vector_indices + output_f + '.npy'
+        if os.path.isfile(output_f) and not overwrite: continue
+        outputs = pickle.load(open(f, 'rb'))
+        print('saving',output_f)
+        outputs_to_codebook_indices(outputs, model_pt, output_f, save)
+
+def outputs_to_codebook_indices(outputs, model_pt, filename, save = True):
+    cv = outputs_to_codevectors(outputs, model_pt)
+    codebook = load_codebook(model_pt)
+    ci = codevectors_to_codebook_indices(cv, codebook)
+    if save: 
+        print('saving',filename)
+        save_codebook_indices(ci, filename)
+    return ci
+
 def audio_file_to_codebook_indices(audio_filename, processor, model, model_pt,
     start = 0.0, end = None, save = True, verbose = True):
     if verbose: print('handling', audio_filename)
     inputs = audio_to_inputs(audio_filename, processor, start, end)
     outputs = inputs_to_outputs(inputs, model)
-    cv = outputs_to_codevectors(outputs, model_pt)
-    codebook = load_codebook(model_pt)
-    ci = codevectors_to_codebook_indices(cv, codebook)
-    if save: 
-        filename = audio_filename_to_codebook_indices_filename(audio_filename)
-        print('saving',filename)
-        save_codebook_indices(ci, filename)
-    return ci
+    filename = audio_filename_to_codebook_indices_filename(audio_filename)
+    ci = outputs_to_codebook_indices(outputs, model_pt, filename, save)
 
 def load_pretrained_processor_model(version = 'small'):
     if version == 'small': name = pretrained_small
