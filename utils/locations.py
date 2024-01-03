@@ -43,7 +43,7 @@ mald_variable_stress_info += 'mald_variable_stress_syllable.tsv'
 
 
 stress_perceptron_dir = ld_base + 'PERCEPTRONS/'
-cnn_tf_comparison_dir = stress_perceptron_dir + 'CCN_TF_COMPARISON/'
+cnn_tf_comparison_dir = stress_perceptron_dir + 'CNN_TF_COMPARISON/'
 
 
 codebook_indices_dir = '../CODEBOOK_INDICES/'
