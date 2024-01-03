@@ -31,7 +31,7 @@ def train_classifier(stress_info, name , layer, section, overwrite = False,
     if occlusion_type: name += '-occlusion-' + occlusion_type
     if random_state != 1: 
         name += '_rs-' + str(random_state)
-        f=locations.stress_perceptron_dir + 'clf' + name + '_' + section   
+        f=locations.cnn_tf_comparison_dir+ 'clf' + name + '_' + section   
     else:
         f=locations.stress_perceptron_dir + 'clf' + name + '_' + section   
     f+= '_' + str(layer) + '.pickle'
@@ -61,6 +61,20 @@ def train_classifiers(stress_info, name = '', layers = layers,
                 random_gt = random_gt, occlusion_type = occlusion_type,
                 random_state = random_state)
 
+def train_mlp_for_cnn_tf_comparison(stress_info, name, layers = layers,
+    occlusion_type = None, n_classifiers = 100):
+    if occlusion_type: sections = [occlusion_type]
+    else: sections = ['vowel', 'syllable']
+    for i in range(2,n_classifiers + 2):
+        train_classifiers(stress_info, name, layers, sections,
+        occlusion_type = occlusion_type, random_state = i)
+
+def train_all_mlp_for_cnn_tf_comparison(stress_info,name,n_classifiers = 100):
+    for occlusion_type in [None,'vowel', 'syllable']:
+        train_mlp_for_cnn_tf_comparison(stress_info, name, 
+            occlusion_type = occlusion_type, n_classifiers = n_classifiers)
+    
+
 def save_performance(gt, hyp, name, layer, section, random_state):
     d = {}
     d['mcc'] = round(matthews_corrcoef(gt, hyp), 3)
@@ -81,11 +95,6 @@ def save_performance(gt, hyp, name, layer, section, random_state):
         json.dump(d, fout)
     return d
 
-def train_mlp_for_cnn_tf_comparison(stress_info, name, layers = None,
-    n_classifiers = 100):
-    if not layers: layers = layers
-    for i in range(2,n_classifiers + 2):
-        train_classifiers(stress_info, name, layers, random_state = i)
 
 
 class Perceptron:
@@ -120,6 +129,18 @@ def get_scores(name, layer = '*', section = '*', occlusion = False):
 def show_scores(name, section):
     f = locations.stress_perceptron_dir + 'score_' + name 
     f +=  '_*_'+ section + '.json'
+    fn = glob.glob(f)
+    for f in fn:
+        print(f)
+        with open(f, 'r') as fin:
+            d = json.load(fin)
+        print('mcc', d['mcc'])
+        print('---')
+
+def show_cnn_tf_scores(name, section, occlusion = False):
+    f = locations.cnn_tf_comparison_dir+ 'score_' + name 
+    if occlusion: f += '-occlusion*'
+    f +=  '_*_'+ section + '*.json'
     fn = glob.glob(f)
     for f in fn:
         print(f)
