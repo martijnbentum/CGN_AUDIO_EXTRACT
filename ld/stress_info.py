@@ -33,7 +33,8 @@ class Info:
 
     def xy(self, layer='cnn', section = 'syllable', random_gt = False,
         occlusion_type = None):
-        attr_name = '_xy_' + section + '_' + str(layer)
+        attr_name = '_xy_' + section + '_' + str(layer) 
+        attr_name += '_' + str(occlusion_type)
         if hasattr(self, attr_name):
             return getattr(self, attr_name)
         ot = occlusion_type
@@ -157,6 +158,7 @@ class Syllable:
     def mean_feature_vector(self, layer = 'cnn', section = 'syllable',
         occlusion_type = None):
         attr_name = '_' + section + '_mean_feature_vector_' + str(layer)
+        attr_name += '_' + str(occlusion_type)
         if hasattr(self,attr_name):
             return getattr(self,attr_name)
         temp = np.mean(self.feature_vectors(layer, section, occlusion_type), 
