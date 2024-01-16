@@ -63,13 +63,20 @@ def train_classifiers(stress_info, name = '', layers = layers,
 
 def train_mlp_for_cnn_tf_comparison(stress_info, name, layers = layers,
     occlusion_type = None, n_classifiers = 100):
+    '''a difference was observed between the mlp trained on the cnn 
+    and the transformer layers. This function trains multiple mlp's
+    to see if this difference is consistent.'''
     if occlusion_type: sections = [occlusion_type]
     else: sections = ['vowel', 'syllable']
     for i in range(2,n_classifiers + 2):
         train_classifiers(stress_info, name, layers, sections,
         occlusion_type = occlusion_type, random_state = i)
 
+
 def train_all_mlp_for_cnn_tf_comparison(stress_info,name,n_classifiers = 100):
+    '''see train_mlp_for_cnn_tf_comparison
+    wrapper function to call the difference occlusion types.
+    '''
     for occlusion_type in [None,'vowel', 'syllable']:
         train_mlp_for_cnn_tf_comparison(stress_info, name, 
             occlusion_type = occlusion_type, n_classifiers = n_classifiers)
@@ -107,24 +114,38 @@ class Perceptron:
 
 
 def score_filename_to_layer_section(f):
-    layer = f.split('_')[-2]
-    section = f.split('_')[-1].split('.')[0]
-    return layer, section
+    if not '_rs-' in f:
+        section = f.split('_')[-1].split('.')[0]
+        layer = f.split('_')[-2]
+        return layer, section
+    else:
+        random_state = f.split('-')[-1].split('.')[0]
+        section = f.split('_')[-2]
+        layer = f.split('_')[-3]
+        return layer, section, random_state
 
 
-def get_scores(name, layer = '*', section = '*', occlusion = False):
-    f = locations.stress_perceptron_dir + 'score_' + name 
+def get_scores(name, layer = '*', section = '*', occlusion = False,
+    directory = locations.stress_perceptron_dir, random_state = ''):
+    f = directory+ 'score_' + name 
     if occlusion: f += '-occlusion*'
-    f +=  '_' + str(layer) +'_'+ section + '.json'
+    f +=  '_' + str(layer) +'_'+ section + random_state + '.json'
     fn = glob.glob(f)
     output = {}
     for f in fn:
         print(f)
-        layer, section = score_filename_to_layer_section(f)
+        key = score_filename_to_layer_section(f)
         with open(f, 'r') as fin:
             d = json.load(fin)
-        output[layer,section] = d
+        output[key] = d
     return output
+
+def get_cnn_tf_scores(name, layer = '*', section = '*', occlusion = False,
+    directory = locations.cnn_tf_comparison_dir, random_state = ''):
+    if type(random_state) == int: random_state = '_rs-' + str(random_state)
+    elif random_state == '': random_state = '*'
+    return get_scores(name, layer, section, occlusion, directory, random_state)
+    
 
 def show_scores(name, section):
     f = locations.stress_perceptron_dir + 'score_' + name 
@@ -151,6 +172,10 @@ def show_cnn_tf_scores(name, section, occlusion = False):
 
 def plot_scores(name = 'mald-variable-stress-small-pretrained', 
     occlusion =False):
+    '''plot the mcc scores for the mlps trained on the wav2vec hidden states
+    compares performance between mlps trained on vowel syllable and word
+    also shows performance for random labels as a sanity check
+    '''
     scores= get_scores(name, occlusion = occlusion)
     print(scores.keys())
     mcc_vowel= [scores[str(layer),'vowel']['mcc'] for layer in layers]
@@ -169,3 +194,32 @@ def plot_scores(name = 'mald-variable-stress-small-pretrained',
     plt.xlabel('wav2vec 2.0 layer')
     plt.ylabel('matthews correlation coefficient')
     plt.show()
+
+
+def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel'):
+    '''plot the mcc scores for the mlps trained on the wav2vec hidden states
+    compares performance between occluded audio input and non occluded audio 
+    occluded audio, everything besides the vowel or syllable is set to 0.
+    '''
+    sno= get_cnn_tf_scores(name, occlusion = False)
+    so= get_cnn_tf_scores(name, occlusion = True)
+    plt.clf()
+    plt.ylim(-0.1,1)
+    argsno = {'label':'no occlusion','alpha':0.1,'color':'navy'}
+    argso = {'label':'occlusion','alpha':0.1,'color':'darkorange'}
+    for rs in range(2,102):
+        mcc_no=[sno[str(layer),section,str(rs)]['mcc'] for layer in layers]
+        mcc_o= [so[str(layer),section,str(rs)]['mcc'] for layer in layers]
+        l1 = plt.plot(mcc_no, **argsno) 
+        l2 = plt.plot(mcc_o, **argso) 
+        argsno['label'] = None
+        argso['label'] = None
+    legend = plt.legend()
+    for handle in legend.legendHandles:
+        handle.set_alpha(1)
+    plt.grid(alpha = 0.3)
+    plt.xticks(range(len(layers)), layers)
+    plt.xlabel('wav2vec 2.0 layer')
+    plt.ylabel('matthews correlation coefficient')
+    plt.show()
+    
