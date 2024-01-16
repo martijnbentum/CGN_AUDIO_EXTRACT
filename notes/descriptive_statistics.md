@@ -1,11 +1,16 @@
 
 ## Overview of the Dutch part of the CGN
 
-(h) = hour
-(s) = second
-spks = speakers
+total duration 494 hours
 
-component c and d were recorded at a different sample rate (8 KHz I think, telephone recordings)
+see also: https://ivdnt.org/images/stories/producten/documentatie/cgn_website/doc_English/topics/index.htm
+
+(h) = hour <br>
+(s) = second <br> 
+dur = duration
+spks = speakers 
+
+component c and d were recorded at a different sample rate (8 KHz; telephone recordings)
 
 id | component | # audio files | dur total (h) | min dur (s) | median dur (s) | max dur (s) | # speakers | min # spks | median # spks | max # spks
 --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
