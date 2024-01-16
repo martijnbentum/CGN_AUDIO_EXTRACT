@@ -1,6 +1,12 @@
 
 ## Overview of the Dutch part of the CGN
 
+(h) = hour
+(s) = second
+spks = speakers
+
+component c and d were recorded at a different sample rate (8 KHz I think, telephone recordings)
+
 id | component | # audio files | dur total (h) | min dur (s) | median dur (s) | max dur (s) | # speakers | min # spks | median # spks | max # spks
 --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
 a|Spontaneous conversations|925|149.35|161|601.0|1275|232|2|2.0|6
