@@ -1,4 +1,4 @@
-id | component | # audios | dur total (h) | min dur (s) | median dur (s) | max dur (s) | # speakers | min # speakers | median # speakers | max # speakers
+id | component | # audios | dur total (h) | min dur (s) | median dur (s) | max dur (s) | # speakers | min # spks | median # spks | max # spks
 --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
 a|Spontaneous conversations|925|149.35|161|601.0|1275|232|2|2.0|6
 b|Interviews with teachers of Dutch|80|21.61|424|965.0|1261|81|1|2.0|3
