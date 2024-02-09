@@ -1,5 +1,7 @@
 from text.models import Audio,Speaker
 import numpy as np
+from utils import phrase
+
 
 def component_to_description_dict():
     output = {'a':"Spontaneous conversations",
@@ -105,6 +107,39 @@ def statistics_per_component(audio_dict = None, speaker_dict = None,
     return '\n'.join(output)
             
              
+def seconds_time_to_string(seconds):
+    hours = int(seconds/3600)
+    minutes = int((seconds - hours*3600)/60)
+    seconds = int(seconds - hours*3600 - minutes*60)
+    return f'{hours}:{minutes}:{seconds}'
+
+def analyze_gender(cgn = None):
+    if not cgn: cgn = phrase.load_cgn()
+    output = []
+    for gender in ['male','female']:
+        o = [v for k,v in cgn.items() if v['phrases'][0]['gender'] == gender]
+        duration = sum([x['duration'] for x in o])
+        print(gender.ljust(9),len(o), seconds_time_to_string(duration))
+        output.append(o)
+    return output
+
+def analyze_phrases(cgn = None):
+    if not cgn: cgn = phrase.load_cgn()
+    speaker_duration,durations,phrases= [],[],[]
+    for k,v in cgn.items():
+        p = v['phrases']
+        speaker_duration.append( v['duration'] )
+        durations.extend([x['duration'] for x in p])
+        phrases.extend(p)
+    print('total phrases:',len(phrases))
+    print('min phrase duration:',np.min(durations))
+    print('mean phrase duration:',np.mean(durations))
+    print('median phrase duration:',np.median(durations))
+    print('min speaker duration:',np.min(speaker_duration))
+    print('mean speaker duration:',np.mean(speaker_duration))
+    return phrases, durations, speaker_duration
+
+
 
     
 
