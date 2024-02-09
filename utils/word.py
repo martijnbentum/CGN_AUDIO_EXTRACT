@@ -85,7 +85,8 @@ def load_in_all_words_from_all_textgrids():
 def words_to_duration(words):
     return sum([word.duration for word in words])
 
-def _check_end_of_phrase(word,phrase,end_on_eos,maximum_duration):
+def _check_end_of_phrase(word,phrase,end_on_eos,maximum_duration,
+    end_on_special_word = True, end_on_overlap = True):
     '''checks whether phrase should end based on word status and
     user specified criteria.
     word exclusion: overlap or special word (i.e. a * or ggg code in the word)
@@ -97,7 +98,11 @@ def _check_end_of_phrase(word,phrase,end_on_eos,maximum_duration):
     else: duration = 0
     if maximum_duration: to_long = duration > maximum_duration
     # ipa_missing = word.word_ipa_phoneme == ''
-    exclude_word =word.overlap or word.special_word #or ipa_missing
+    if end_on_special_word and end_on_overlap:
+        exclude_word =word.overlap or word.special_word #or ipa_missing
+    elif end_on_overlap: exclude_word = word.overlap
+    elif end_on_special_word: exclude_word = word.special_word #or ipa_missing
+    else: exclude_word = False
     if exclude_word: end = True
     elif to_long: end = True
     else: phrase.append(word)
@@ -115,7 +120,8 @@ def _add_phrase_to_phrases(phrase,phrases,minimum_duration):
     else: phrases.append(phrase)
 
 def words_to_phrases(words, end_on_eos = True, 
-    minimum_duration = None, maximum_duration = None):
+    minimum_duration = None, maximum_duration = None, 
+    end_on_special_word = False, end_on_overlap = True):
     '''split word list into phrases based on several criteria
     see _check_end_of_phrase
     end_on_eos          whether to end a phrase because of an end of sentence
@@ -124,11 +130,13 @@ def words_to_phrases(words, end_on_eos = True,
                         than minimum_duration if none will not be used
     maximum_duration    whether to end a phrase because it is longer than
                         maximum_duration if none will not be used
+    end_on_special_word whether to end a phrase because of a special word
+    end_on_overlap      whether to end a phrase because of an overlap
     '''
     phrases, phrase = [], []
     for i,word in enumerate(words):
         end,duration,to_long, exclude_word = _check_end_of_phrase(
-            word,phrase,end_on_eos,maximum_duration)
+            word,phrase,end_on_eos,maximum_duration, end_on_special_word)
         if i == len(words) -1: end = True
         if end:
             _add_phrase_to_phrases(phrase,phrases,minimum_duration)
