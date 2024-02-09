@@ -63,8 +63,8 @@ def load_in_awd_textgrid(filename):
         tg.speakers.add(speaker)
     return tg
 
-def load_in_all_awd_textgrids():
-    cgn_ids = identifiers.load_cgn_ids()
+def load_in_all_awd_textgrids(cgn_ids = None):
+    if not cgn_ids: cgn_ids = identifiers.load_cgn_ids()
     tgs = []
     for cgn_id in cgn_ids:
         print(cgn_id)
