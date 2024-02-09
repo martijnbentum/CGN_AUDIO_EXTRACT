@@ -3,6 +3,11 @@ from . import phonemes
 from progressbar import progressbar
 from text.models import Speaker 
 
+def load_cgn():
+    with open('../cgn.json') as f:
+        d = json.load(f)
+    return d
+
 class CGN:
     def __init__(self, save = False):
         self.speakers = Speaker.objects.all()
@@ -11,9 +16,12 @@ class CGN:
 
     def _make_speaker_phrases(self):
         self.d = {}
+        self.errors = []
         for speaker in progressbar(self.speakers):
             sp = SpeakerPhrases(speaker)
-            self.d[speaker.speaker_id] = sp.to_dict
+            d = sp.to_dict
+            if d == None: self.errors.append(sp)
+            else:self.d[speaker.speaker_id] = sp.to_dict
             
     @property
     def to_dict(self):
@@ -46,6 +54,7 @@ class SpeakerPhrases:
 
     @property
     def to_dict(self):
+        if len(self.phrases) == 0: return None
         d = {}
         d['duration'] = sum([x.duration for x in self.phrases])
         d['phrases'] = [p.to_dict for p in self.phrases]
