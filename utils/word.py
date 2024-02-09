@@ -1,5 +1,6 @@
 from utils import general
 from utils import textgrid
+from progressbar import progressbar
 
 def speaker_textgrid_to_words(tg, speaker):
     from text.models import Word
@@ -73,12 +74,12 @@ def textgrid_to_words(tg):
         words.extend( speaker_textgrid_to_words(tg, speaker))
     return words
 
-def load_in_all_words_from_all_textgrids():
-    from text.models import Textgrid
-    tgs = Textgrid.objects.all()
+def load_in_all_words_from_all_textgrids(tgs = None):
+    if not tgs:
+        from text.models import Textgrid
+        tgs = Textgrid.objects.all()
     words = []
-    for i,tg in enumerate(tgs):
-        print(i,tg)
+    for tg in progressbar(tgs):
         words.extend( textgrid_to_words(tg) )
     return words
 
