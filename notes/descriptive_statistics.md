@@ -29,3 +29,18 @@ l|Commentaries/columns/reviews|218|7.84|14|91.5|760|206|1|1.0|6
 m|Ceremonious speeches/sermons|6|0.76|158|420.5|867|4|1|1.0|2
 n|Lectures/seminars|25|6.34|77|951.0|1746|25|1|1.0|2
 o|Read speech|561|64.14|209|474.0|1506|325|1|1.0|2
+
+
+Distribution of phrases (maximum duration 15 seconds; ended phrase before a word overlapped with another speaker)
+
+<img width="603" alt="Screenshot 2024-02-09 at 11 02 47" src="https://github.com/martijnbentum/CGN_AUDIO_EXTRACT/assets/19554953/aff8585a-64a5-4f9f-91c2-fe665af25bc2">
+
+total phrases: 275596 <br>
+min phrase duration: 0.020 <br>
+mean phrase duration: 6.405 <br>
+median phrase duration: 4.368 <br>
+min speaker duration: 0.0600 <br>
+mean speaker duration: 610.765 <br>
+
+
+
