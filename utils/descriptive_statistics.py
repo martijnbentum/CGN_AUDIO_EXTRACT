@@ -85,6 +85,8 @@ def statistics_per_component(audio_dict = None, speaker_dict = None,
     nspeakers_per_audio_dict = None):
     if not audio_dict: audio_dict = component_to_audio_dict()
     if not speaker_dict: speaker_dict = component_to_speaker_dict(audio_dict)
+    if not nspeakers_per_audio_dict: 
+        nspeakers_per_audio_dict = component_to_nspeakers_per_audio(audio_dict)
     audio_duration_dict = component_to_audio_duration_dict(audio_dict)
     description_dict = component_to_description_dict()
     output = markdown_table_header()
@@ -132,11 +134,11 @@ def analyze_phrases(cgn = None):
         durations.extend([x['duration'] for x in p])
         phrases.extend(p)
     print('total phrases:',len(phrases))
-    print('min phrase duration:',np.min(durations))
-    print('mean phrase duration:',np.mean(durations))
-    print('median phrase duration:',np.median(durations))
-    print('min speaker duration:',np.min(speaker_duration))
-    print('mean speaker duration:',np.mean(speaker_duration))
+    print('min phrase duration:',round(np.min(durations),3))
+    print('mean phrase duration:',round(np.mean(durations),3))
+    print('median phrase duration:',round(np.median(durations),3))
+    print('min speaker duration:',round(np.min(speaker_duration),3))
+    print('mean speaker duration:',round(np.mean(speaker_duration),3))
     return phrases, durations, speaker_duration
 
 
