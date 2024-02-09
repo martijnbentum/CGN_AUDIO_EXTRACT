@@ -25,7 +25,11 @@ def make_audio_filenames_list(restrict_to_dutch = True, save = True):
     fn = glob.glob(locations.cgn_audio_dir +'**', recursive=True)
     output = []
     for f in fn:
-        if '/nl/fn' in f: output.append(f)
+        if not f.endswith('.wav'): continue
+        if restrict_to_dutch and '/nl/fn' in f:
+            output.append(f)
+        else:
+            output.append(f)
     if save:
         with open('../audio_filenames','w') as fout:
             fout.write('\n'.join(output))
