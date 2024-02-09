@@ -1,7 +1,7 @@
 
-## Overview of the Dutch part of the CGN
+## Overview of the CGN
 
-total duration 494 hours
+total duration 795 hours of Netherlandic & Flemish Dutch speech
 
 see also: https://ivdnt.org/images/stories/producten/documentatie/cgn_website/doc_English/topics/index.htm
 
@@ -11,6 +11,47 @@ dur = duration
 spks = speakers 
 
 component c and d were recorded at a different sample rate (8 KHz; telephone recordings)
+
+id | component | # audio files | dur total (h) | min dur (s) | median dur (s) | max dur (s) | # speakers | min # spks | median # spks | max # spks
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+a|Spontaneous conversations|1537|224.44|37|594.0|1816|364|2|2.0|6
+b|Interviews with teachers of Dutch|160|50.61|424|1069.5|2106|162|1|2.0|3
+c|Spontaneous telephone dialogues|649|93.43|93|573.0|599|510|2|3.0|3
+d|Spontaneous telephone dialogues|581|64.11|89|424.0|904|425|2|2.0|4
+e|Simulated business negotiations|67|10.67|454|587.0|615|31|2|2.0|3
+f|Interviews/discussions/debates|642|63.74|15|315.0|1691|877|1|2.0|8
+g|Discussions/debates/ meetings|248|36.46|25|432.0|1788|235|1|3.0|17
+h|Lessons recorded in the classroom|265|43.52|148|598.0|1600|413|1|4.0|12
+i|Live (sports) commentaries|325|20.63|10|162.0|1083|94|1|1.0|4
+j|Newsreports/reportages|506|17.28|7|75.0|634|494|1|1.5|7
+k|News|5581|34.84|4|19.0|262|248|1|1.0|5
+l|Commentaries/columns/reviews|364|14.63|14|103.5|1223|264|1|1.0|6
+m|Ceremonious speeches/sermons|16|2.17|61|412.5|1602|12|1|1.0|2
+n|Lectures/seminars|78|15.6|77|637.0|1746|40|1|1.0|2
+o|Read speech|1761|103.56|94|122.0|1506|474|1|1.0|2
+
+
+<br>
+
+#### Distribution of phrases (maximum duration 15 seconds; ended phrase before a word overlapped with another speaker)
+
+<img width="610" alt="Screenshot 2024-02-09 at 21 34 24" src="https://github.com/martijnbentum/CGN_AUDIO_EXTRACT/assets/19554953/de79ae42-a0a8-43b3-a3b2-8f61375acc18">
+
+<br>
+total phrases: 275596 <br>
+min phrase duration: 0.001 <br>
+mean phrase duration: 6.484 <br>
+median phrase duration: 4.484 <br>
+min speaker duration: 0.060 <br>
+mean speaker duration: 668.172 <br>
+
+male      2495 430:01:30
+female    1728 350:11:5
+
+
+
+### Netherlandic Dutch only
+total duration 494 hours
 
 id | component | # audio files | dur total (h) | min dur (s) | median dur (s) | max dur (s) | # speakers | min # spks | median # spks | max # spks
 --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
@@ -29,18 +70,4 @@ l|Commentaries/columns/reviews|218|7.84|14|91.5|760|206|1|1.0|6
 m|Ceremonious speeches/sermons|6|0.76|158|420.5|867|4|1|1.0|2
 n|Lectures/seminars|25|6.34|77|951.0|1746|25|1|1.0|2
 o|Read speech|561|64.14|209|474.0|1506|325|1|1.0|2
-
-
-Distribution of phrases (maximum duration 15 seconds; ended phrase before a word overlapped with another speaker)
-
-<img width="603" alt="Screenshot 2024-02-09 at 11 02 47" src="https://github.com/martijnbentum/CGN_AUDIO_EXTRACT/assets/19554953/aff8585a-64a5-4f9f-91c2-fe665af25bc2">
-
-total phrases: 275596 <br>
-min phrase duration: 0.020 <br>
-mean phrase duration: 6.405 <br>
-median phrase duration: 4.368 <br>
-min speaker duration: 0.0600 <br>
-mean speaker duration: 610.765 <br>
-
-
 
