@@ -4,6 +4,9 @@ from . import filename_to_component
 import os
 import subprocess
 import librosa
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.signal import hilbert,butter,filtfilt
 
 def load_audio(filename, start = 0.0, end=None):
 	if not end: duration = None
@@ -88,6 +91,50 @@ def read_in_all_audios(filename_list = None):
 def load_audio_fon_phrase(fon_phrase):
     p = fon_phrase
     return load_audio(p.textgrid.audio.filename,p.start_time, p.end_time)
+
+def hilbert_envelope(audio, sr = 16_000):
+    analytic_signal = hilbert(audio)
+    amplitude_envelope = np.abs(analytic_signal) **2 *20
+    frequency =50 
+    order = 3
+    b, a = butter(order, frequency / (0.5 * sr), btype='low', analog=False)
+    amplitude_envelope = filtfilt(b, a, amplitude_envelope)
+    return amplitude_envelope
+
+def speech_envelope(audio, sr = 16_000, envelope_sr = 100, swd = 2.5):
+    step_size = sr / envelope_sr
+    window_size = round(step_size * swd)
+    window = np.hamming(window_size)
+    pad_size = round((window_size - step_size)/2)
+    print(pad_size)
+    audio = np.concatenate((np.zeros(pad_size),audio,np.zeros(pad_size)))
+    steps = int(len(audio) / step_size) 
+    print(step_size,window_size,window.shape,steps)
+    envelope = np.zeros(steps)
+    for step in range(steps):
+        start = int(step * step_size)
+        end = start + window_size
+        if end > len(audio): break
+        envelope[step] = sum((audio[start:end] * window)**2)
+    return envelope, envelope_sr 
     
+def plot_audio(audio, start_time = 0, end_time = None, sr = 16_000,
+    plot_envelope = False):
+    start_index = int(start_time * sr)
+    end_index = int(end_time * sr) if end_time else len(audio)
+    s = audio[start_index:end_index]
+    time = [x/sr + start_time for x in range(len(s))]
+    se, envelope_sr = speech_envelope(s)
+    se_time = [x/envelope_sr + start_time for x in range(len(se))]
+    he = hilbert_envelope(s)
+    plt.clf()
+    plt.plot(time,s,color = 'black', alpha = .7,linewidth = .5)
+    plt.plot(se_time,se,color = 'blue', alpha = .9,linewidth = 1)
+    plt.plot(time,he,color = 'red', alpha = .9,linewidth = 1)
+    # plt.xticks(locs, [round(x/sr,2) for x in locs])
+    plt.xlabel('seconds')
+    plt.ylabel('Amplitude')
+    plt.grid(alpha = .3)
+    plt.show()
         
         
