@@ -9,6 +9,7 @@ from sklearn.metrics import classification_report
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
+from matplotlib.patches import Patch
 
 layers = ['cnn',1,6,12,18,21,24]
 sections = ['vowel', 'syllable', 'word']
@@ -195,8 +196,38 @@ def plot_scores(name = 'mald-variable-stress-small-pretrained',
     plt.ylabel('matthews correlation coefficient')
     plt.show()
 
+def compute_mean_and_sem(d, section):
+    '''compute the mean and standard error of the mean for the mcc scores.'''
+    all_mccs = []
+    means = []
+    sems = []
+    stds = []
+    for layer in layers:
+        mccs = [d[str(layer),section, str(rs)]['mcc'] for rs in range(2,102)]
+        means.append( np.mean(mccs) )
+        stds.append( np.std(mccs) )
+        sems.append( np.std(mccs)/np.sqrt(len(mccs)) )
+        all_mccs.append(mccs)
+    cis = [2.576 * sem for sem in sems]
+    return means, stds, sems, cis, all_mccs
+        
+def _add_errorbars(sno, so, section, add_legend = False):
+    '''add errorbars to the plot_cnn_tf_comparison plot'''
+    x = range(len(layers))
+    means, stds, sems, cis, _ = compute_mean_and_sem(sno, section)
+    plt.errorbar(x, means, yerr = cis, fmt = ',', markersize = 15, 
+        color = 'black',
+        elinewidth = 2.5, capsize = 9, capthick = 2.5,label = 'no occlusion')
+    means, stds, sems, cis, _ = compute_mean_and_sem(so, section)
+    plt.errorbar(x, means, yerr = cis, fmt = ',', markersize = 12, 
+        color = 'orange', 
+        elinewidth = 2.5, capsize = 9, capthick = 2.5,label = 'occlusion')
+    if add_legend:
+        legend = plt.legend()
 
-def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel'):
+
+def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel',
+    add_errorbars = True, add_lines = True, aspect = 6):
     '''plot the mcc scores for the mlps trained on the wav2vec hidden states
     compares performance between occluded audio input and non occluded audio 
     occluded audio, everything besides the vowel or syllable is set to 0.
@@ -204,22 +235,28 @@ def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel'):
     sno= get_cnn_tf_scores(name, occlusion = False)
     so= get_cnn_tf_scores(name, occlusion = True)
     plt.clf()
-    plt.ylim(-0.1,1)
+    plt.ylim(0.5,1)
     argsno = {'label':'no occlusion','alpha':0.1,'color':'navy'}
     argso = {'label':'occlusion','alpha':0.1,'color':'darkorange'}
-    for rs in range(2,102):
-        mcc_no=[sno[str(layer),section,str(rs)]['mcc'] for layer in layers]
-        mcc_o= [so[str(layer),section,str(rs)]['mcc'] for layer in layers]
-        l1 = plt.plot(mcc_no, **argsno) 
-        l2 = plt.plot(mcc_o, **argso) 
-        argsno['label'] = None
-        argso['label'] = None
-    legend = plt.legend()
-    for handle in legend.legendHandles:
-        handle.set_alpha(1)
+    if add_lines:
+        for rs in range(2,102):
+            mcc_no=[sno[str(layer),section,str(rs)]['mcc'] for layer in layers]
+            mcc_o= [so[str(layer),section,str(rs)]['mcc'] for layer in layers]
+            l1 = plt.plot(mcc_no, **argsno) 
+            l2 = plt.plot(mcc_o, **argso) 
+            argsno['label'] = None
+            argso['label'] = None
+        legend = plt.legend()
+        for handle in legend.legendHandles:
+            handle.set_alpha(1)
     plt.grid(alpha = 0.3)
     plt.xticks(range(len(layers)), layers)
     plt.xlabel('wav2vec 2.0 layer')
     plt.ylabel('matthews correlation coefficient')
+    add_legend = not add_lines
+    if add_errorbars:
+        _add_errorbars(sno, so, section, add_legend)
+    if aspect:
+        plt.gca().set_aspect(aspect)
     plt.show()
     
