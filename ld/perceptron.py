@@ -252,7 +252,7 @@ def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel',
     plt.grid(alpha = 0.3)
     plt.xticks(range(len(layers)), layers)
     plt.xlabel('wav2vec 2.0 layer')
-    plt.ylabel('matthews correlation coefficient')
+    plt.ylabel("matthew's correlation coefficient")
     add_legend = not add_lines
     if add_errorbars:
         _add_errorbars(sno, so, section, add_legend)
