@@ -14,6 +14,39 @@ from matplotlib.patches import Patch
 layers = ['cnn',1,6,12,18,21,24]
 sections = ['vowel', 'syllable', 'word']
 
+def _train_mlp_classifier(X,y, random_state = 1):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, 
+        stratify=y,random_state= random_state)
+    clf=MLPClassifier(random_state=1,max_iter=300)
+    clf.fit(X_train, y_train)
+    hyp = clf.predict(X_test)
+    return y_test, hyp, clf
+
+def train_all_word_classifiers(stress_info = None, layers = layers, 
+    n_classifiers = 100): 
+    '''train mlp classifiers based on the data structure hidden_states.'''
+    if not stress_info: stress_info = Info(dataset_name = 'mald_all')
+    for layer in layers:
+        for i in range(2,n_classifiers + 2):
+            print('starting on',layer, i)
+            train_classifier_all_words(stress_info, layer = layer, 
+                random_state = i)
+
+def train_classifier_all_words(stress_info, name = 'mald-all' , 
+    layer = 'cnn', overwrite = False,random_state = 1):
+    f=locations.all_words_stress_perceptron_dir + 'clf_' + name + '_vowel'
+    f+= '_' + str(layer) + '.pickle'
+    if os.path.isfile(f) and not overwrite:
+        print(f, 'already exists, skipping')
+    print('starting on',f)
+    X, y = stress_info.xy(layer = layer, section = 'vowel')
+    y_test, hyp, clf = _train_mlp_classifier(X,y, random_state)
+    save_performance(y_test, hyp, name, layer, 'vowel', random_state,
+        directory = locations.all_words_stress_perceptron_dir)
+        
+    with open(f, 'wb') as fout:
+        pickle.dump(clf,fout)
+
 def train_classifier(stress_info, name , layer, section, overwrite = False,
     random_gt = False, occlusion_type = None, random_state = 1):
     '''train mlp classifier based on the data structure hidden_states.
@@ -42,15 +75,12 @@ def train_classifier(stress_info, name , layer, section, overwrite = False,
     print('starting on',f)
     X, y = stress_info.xy(layer = layer, section = section, 
         random_gt = random_gt, occlusion_type = occlusion_type)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, 
-        stratify=y,random_state= random_state)
-    clf=MLPClassifier(random_state=1,max_iter=300)
-    clf.fit(X_train, y_train)
-    hyp = clf.predict(X_test)
+    y_test, hyp, clf = _train_mlp_classifier(X,y, random_state)
     save_performance(y_test, hyp, name, layer, section, random_state)
         
     with open(f, 'wb') as fout:
         pickle.dump(clf,fout)
+
 
 def train_classifiers(stress_info, name = '', layers = layers, 
     sections = sections, random_gt = False, occlusion_type = None,
@@ -83,7 +113,8 @@ def train_all_mlp_for_cnn_tf_comparison(stress_info,name,n_classifiers = 100):
             occlusion_type = occlusion_type, n_classifiers = n_classifiers)
     
 
-def save_performance(gt, hyp, name, layer, section, random_state):
+def save_performance(gt, hyp, name, layer, section, random_state, 
+    directory = None):
     d = {}
     d['mcc'] = round(matthews_corrcoef(gt, hyp), 3)
     d['accuracy'] = round(accuracy_score(gt, hyp), 3)
@@ -92,11 +123,14 @@ def save_performance(gt, hyp, name, layer, section, random_state):
     for k,v in d.items():
         print(k,v)
     print('---')
-    if random_state != 1: 
+    rs = ''
+    if directory:
+        if random_state != 1:rs = '_rs-' + str(random_state)
+        f = directory + 'score_' + name 
+    elif random_state != 1: 
         rs = '_rs-' + str(random_state)
         f = locations.cnn_tf_comparison_dir + 'score' + name 
     else: 
-        rs = ''
         f = locations.stress_perceptron_dir + 'score' + name 
     f +=  '_' + str(layer)+'_'+ section + rs + '.json'
     with open(f, 'w') as fout:
