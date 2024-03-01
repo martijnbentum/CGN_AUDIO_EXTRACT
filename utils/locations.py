@@ -41,7 +41,9 @@ mald_code_vector_indices = ld_base + 'MALD/codevector_indices/'
 mald_variable_stress_info = mald_variable_stress 
 mald_variable_stress_info += 'mald_variable_stress_syllable.tsv'
 
+mald_all_stress_info = ld_base + 'mald_all_words_stress_syllable.tsv'
 
+all_words_stress_perceptron_dir = ld_base + 'ALL_WORDS_PERCEPTRONS/'
 stress_perceptron_dir = ld_base + 'PERCEPTRONS/'
 cnn_tf_comparison_dir = stress_perceptron_dir + 'CNN_TF_COMPARISON/'
 
