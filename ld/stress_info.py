@@ -2,6 +2,7 @@ from utils import locations
 from utils import audio
 import numpy as np
 import pickle
+from progressbar import progressbar
 import random
 from ld import sox
 from ld import time_index
@@ -9,18 +10,28 @@ from ld import time_index
 float_columns='start_time,end_time,vowel_start_time,vowel_end_time'.split(',')
 
 class Info:
-    def __init__(self, dataset_name='mald', model_type='wav2vec'):
-        if dataset_name == 'mald':
-            self.filename = locations.mald_variable_stress_info
-        else: raise ValueError('dataset_name must be mald')
-        if model_type == 'wav2vec':
-            self.variable_stress_wav_dir = locations.mald_variable_stress_wav 
-            path = locations.mald_variable_stress_pretrain_vectors 
-            self.variable_stress_pretrain_vectors_dir = path
-            path = locations.mald_variable_stress_occlusions_pretrain_vectors
-            self.variable_stress_occlusions_pretrain_vectors_dir = path
-        else: raise ValueError('model_type must be wav2vec')
+    def __init__(self, dataset_name='mald_variable', model_type='wav2vec'):
+        self.dataset_name = dataset_name
+        self.model_type = model_type
+        if model_type != 'wav2vec': 
+            raise ValueError('model_type must be wav2vec')
+        if dataset_name == 'mald_variable': self._set_mald_variable()
+        elif dataset_name == 'mald_all': self._set_mald_all()
+        else: raise ValueError('dataset_name must be mald_variable or mald_all')
         self._set_info()
+
+    def _set_mald_variable(self):
+        self.filename = locations.mald_variable_stress_info
+        self.wav_dir = locations.mald_variable_stress_wav 
+        path = locations.mald_variable_stress_pretrain_vectors 
+        self.pretrain_vectors_dir = path
+        path = locations.mald_variable_stress_occlusions_pretrain_vectors
+        self.occlusions_pretrain_vectors_dir = path
+
+    def _set_mald_all(self):
+        self.filename = locations.mald_all_stress_info
+        self.wav_dir = locations.mald_word_recordings
+        self.pretrain_vectors_dir = locations.mald_pretrain_vectors
 
     def _set_info(self):
         self.info = {}
@@ -32,14 +43,26 @@ class Info:
         self.syllables = [Syllable(x, self.header,self) for x in self.data]
 
     def xy(self, layer='cnn', section = 'syllable', random_gt = False,
-        occlusion_type = None):
+        occlusion_type = None, n = None):
         attr_name = '_xy_' + section + '_' + str(layer) 
         attr_name += '_' + str(occlusion_type)
         if hasattr(self, attr_name):
             return getattr(self, attr_name)
         ot = occlusion_type
+        x_values,y_values = [],[]
+        if not n: syllables = self.syllables
+        else: syllables = self.syllables[:n]
+        for syllable in progressbar(syllables):
+            x = syllable.X(layer, section, ot)
+            if x is None: continue
+            x_values.append(x)
+            y_values.append(syllable.y(random_gt))
+        X = np.array(x_values)
+        y = np.array(y_values)
+        '''
         X = np.array([x.X(layer, section, ot) for x in self.syllables])
         y = np.array([x.y(random_gt) for x in self.syllables])
+        '''
         setattr(self, attr_name, (X,y))
         return getattr(self, attr_name)
         
@@ -61,23 +84,23 @@ class Syllable:
 
     @property
     def wav_filename(self):
-        return self.info.variable_stress_wav_dir + self.word_audio_filename
+        return self.info.wav_dir + self.word_audio_filename
 
     @property
     def pretrain_vectors_filename(self):
-        f = self.info.variable_stress_pretrain_vectors_dir 
+        f = self.info.pretrain_vectors_dir 
         f += self.name + '.pickle'
         return f
 
     @property
     def occlusions_pretrain_vectors_filename_vowel(self):
-        f = self.info.variable_stress_occlusions_pretrain_vectors_dir 
+        f = self.info.occlusions_pretrain_vectors_dir 
         f += self.name + '_only_vowel.pickle'
         return f
 
     @property
     def occlusions_pretrain_vectors_filename_syllable(self):
-        f = self.info.variable_stress_occlusions_pretrain_vectors_dir 
+        f = self.info.occlusions_pretrain_vectors_dir 
         f += self.name + '_only_syllable.pickle'
         return f
 
@@ -161,8 +184,10 @@ class Syllable:
         attr_name += '_' + str(occlusion_type)
         if hasattr(self,attr_name):
             return getattr(self,attr_name)
-        temp = np.mean(self.feature_vectors(layer, section, occlusion_type), 
-            axis=0)
+        feature_vectors = self.feature_vectors(layer, section, occlusion_type)
+        if feature_vectors.size != 0: 
+            temp = np.mean(feature_vectors, axis=0)
+        else: temp = None
         setattr(self, attr_name, temp)
         return getattr(self,attr_name)
     
