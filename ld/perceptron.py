@@ -35,7 +35,7 @@ def train_all_word_classifiers(stress_info = None, layers = layers,
 def train_classifier_all_words(stress_info, name = 'mald-all' , 
     layer = 'cnn', overwrite = False,random_state = 1):
     f=locations.all_words_stress_perceptron_dir + 'clf_' + name + '_vowel'
-    f+= '_' + str(layer) + '.pickle'
+    f+= '_' + str(layer) + '_rs-' + str(random_state) + '.pickle'
     if os.path.isfile(f) and not overwrite:
         print(f, 'already exists, skipping')
     print('starting on',f)
