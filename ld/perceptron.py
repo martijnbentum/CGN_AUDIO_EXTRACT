@@ -14,6 +14,17 @@ from matplotlib.patches import Patch
 layers = ['cnn',1,6,12,18,21,24]
 sections = ['vowel', 'syllable', 'word']
 
+def load_all_word_results():
+    fn = glob.glob(locations.all_words_stress_perceptron_dir + '*.json')
+    results = {}
+    for f in fn:
+        with open(f, 'r') as fin:
+            d = json.load(fin)
+        rs = int(f.split('-')[-1].split('.')[0])
+        layer = f.split('_')[-3]
+        results[(layer,rs)] = d
+    return results
+
 def _train_mlp_classifier(X,y, random_state = 1):
     X_train, X_test, y_train, y_test = train_test_split(X, y, 
         stratify=y,random_state= random_state)
@@ -168,7 +179,6 @@ def get_scores(name, layer = '*', section = '*', occlusion = False,
     fn = glob.glob(f)
     output = {}
     for f in fn:
-        print(f)
         key = score_filename_to_layer_section(f)
         with open(f, 'r') as fin:
             d = json.load(fin)
@@ -237,7 +247,7 @@ def compute_mean_and_sem(d, section):
     sems = []
     stds = []
     for layer in layers:
-        mccs = [d[str(layer),section, str(rs)]['mcc'] for rs in range(2,102)]
+        mccs=[d[str(layer),section, str(rs)]['mcc'] for rs in range(2,102)]
         means.append( np.mean(mccs) )
         stds.append( np.std(mccs) )
         sems.append( np.std(mccs)/np.sqrt(len(mccs)) )
@@ -251,19 +261,20 @@ def _add_errorbars(sno, so, section, add_legend = False):
     means, stds, sems, cis, _ = compute_mean_and_sem(sno, section)
     plt.errorbar(x, means, yerr = cis, fmt = ',', markersize = 15, 
         color = 'black',
-        elinewidth = 2.5, capsize = 9, capthick = 2.5,label = 'no occlusion')
+        elinewidth = 2.5, capsize = 9, capthick = 1,label = 'no occlusion')
     means, stds, sems, cis, _ = compute_mean_and_sem(so, section)
     plt.errorbar(x, means, yerr = cis, fmt = ',', markersize = 12, 
         color = 'orange', 
-        elinewidth = 2.5, capsize = 9, capthick = 2.5,label = 'occlusion')
+        elinewidth = 2.5, capsize = 9, capthick = 1,label = 'occlusion')
     if add_legend:
         legend = plt.legend()
 
 
 def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel',
-    add_errorbars = True, add_lines = True, aspect = 6):
+    add_errorbars = True, add_lines = True, aspect = 6, 
+    add_all_words = False):
     '''plot the mcc scores for the mlps trained on the wav2vec hidden states
-    compares performance between occluded audio input and non occluded audio 
+    compares performance between occluded audio input and non occluded audio
     occluded audio, everything besides the vowel or syllable is set to 0.
     '''
     sno= get_cnn_tf_scores(name, occlusion = False)
@@ -288,9 +299,52 @@ def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel',
     plt.xlabel('wav2vec 2.0 layer')
     plt.ylabel("matthew's correlation coefficient")
     add_legend = not add_lines
+    if add_all_words:
+        results = load_all_word_results()
+        add_errorbars_all_words(results)
     if add_errorbars:
         _add_errorbars(sno, so, section, add_legend)
     if aspect:
         plt.gca().set_aspect(aspect)
     plt.show()
     
+def _compute_mean_and_sem_all_words(results):
+    means, stds, sems, all_mccs = [],[],[],[]
+    for layer in layers:
+        mccs = [results[str(layer), rs]['mcc'] for rs in range(2,102)]
+        means.append( np.mean(mccs) )
+        stds.append( np.std(mccs) )
+        sems.append( np.std(mccs)/np.sqrt(len(mccs)) )
+        all_mccs.append(mccs)
+    cis = [2.576 * sem for sem in sems]
+    return means, stds, sems, cis, all_mccs
+
+def add_errorbars_all_words(results):
+    '''add errorbars to the all words result plot'''
+    x = range(len(layers))
+    means, stds, sems, cis, _ = _compute_mean_and_sem_all_words(results)
+    plt.errorbar(x, means, yerr = cis, fmt = ',', markersize = 15, 
+        color = 'grey',
+        elinewidth = 2.5, capsize = 9, capthick = 1, 
+        label = 'complete dataset')
+
+def plot_all_word_scores():
+    '''plot the mcc scores for the mlps trained on the wav2vec hidden states
+    for all words
+    '''
+    results = load_all_word_results()
+    plt.ion()
+    plt.figure()
+    plt.ylim(0.5,1)
+    '''
+    for rs in range(2,102):
+        mccs=[results[str(layer),rs]['mcc'] for layer in layers]
+        l1 = plt.plot(mccs, alpha = 0.1, color = 'black') 
+    '''
+    plt.grid(alpha = 0.3)
+    plt.xticks(range(len(layers)), layers)
+    plt.xlabel('wav2vec 2.0 layer')
+    plt.ylabel("matthew's correlation coefficient")
+    add_errorbars_all_words(results)
+    plt.show()
+
