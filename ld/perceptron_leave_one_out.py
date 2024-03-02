@@ -16,7 +16,8 @@ def get_all_mald_vowels(n = None):
     info = stress_info.Info(dataset_name = 'mald_all')
     if n: syllables = info.syllables[:n]
     else: syllables = info.syllables
-    vowels = [syllable.vowel_ipa for syllable in syllables]
+    vowels = [syllable.vowel_ipa for syllable in syllables 
+        if not syllable.feature_vectors(section='vowel').size == 0]
     return vowels
 
 
@@ -112,5 +113,5 @@ def save_performance(gt, hyp, layer, vowel, leave_one_in):
     f = directory + 'score_' + name 
     f +=  '_' + str(layer)+'_'+ vowel + '.json'
     with open(f, 'w') as fout:
-        json.dump(d, fout)
-    return d
+        json.dump(report, fout)
+    return report
