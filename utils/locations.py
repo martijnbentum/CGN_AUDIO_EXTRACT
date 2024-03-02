@@ -51,3 +51,6 @@ cnn_tf_comparison_dir = stress_perceptron_dir + 'CNN_TF_COMPARISON/'
 codebook_indices_dir = '../CODEBOOK_INDICES/'
 codebook_indices_phone_counts_dir = '../CODEBOOK_INDICES'
 codebook_indices_phone_counts_dir += '_PHONE_COUNTS/'
+
+leave_one_out_dir = ld_base +'LEAVE_ONE_OUT_PERCEPTRONS/'
+leave_one_in_dir = ld_base +'LEAVE_ONE_IN_PERCEPTRONS/'
