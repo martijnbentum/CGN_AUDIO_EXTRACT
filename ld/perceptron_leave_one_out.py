@@ -12,25 +12,32 @@ from . import stress_info
 layers = ['cnn',1,6,12,18,21,24]
 mald_vowels = 'ɛ ʊ ɪ ɔ i æ u ʌ eɪ aʊ ɔɪ oʊ ai ɑ ɝ'.split(' ')
 
-def get_all_mald_vowels(n = None):
+def _make_all_mald_vowels(save = False):
     info = stress_info.Info(dataset_name = 'mald_all')
-    if n: syllables = info.syllables[:n]
-    else: syllables = info.syllables
+    syllables = info.syllables
     vowels = [syllable.vowel_ipa for syllable in syllables 
         if not syllable.feature_vectors(section='vowel').size == 0]
+    if not save: return vowels
+    with open(locations.ld_base+'all_mald_vowels_stress_info.txt','w') as fout:
+        fout.write('\n'.join(vowels))
+    return vowels
+
+def get_all_mald_vowels():
+    with open(locations.ld_base+'all_mald_vowels_stress_info.txt','r') as fin:
+        vowels = fin.read().split('\n')
     return vowels
 
 
-def make_vowel_indices_dict(n = None):
-    vowels = get_all_mald_vowels(n = n)
+def make_vowel_indices_dict():
+    vowels = get_all_mald_vowels()
     output = {}
     for index, vowel in enumerate(vowels):
         if vowel not in output.keys(): output[vowel] = []
         output[vowel].append(index)
     return output
 
-def make_leave_one_in_train_test_sets(X, y, vowel = 'ɛ', n = None):
-    vowel_indices = make_vowel_indices_dict(n = n)
+def make_leave_one_in_train_test_sets(X, y, vowel = 'ɛ'):
+    vowel_indices = make_vowel_indices_dict()
     leave_one_in_indices = vowel_indices[vowel]
     test_indices = [i for i in range(len(X)) if i not in leave_one_in_indices]
     X_train = X[leave_one_in_indices]
@@ -39,8 +46,8 @@ def make_leave_one_in_train_test_sets(X, y, vowel = 'ɛ', n = None):
     y_test = y[test_indices]
     return X_train, X_test, y_train, y_test
 
-def make_leave_one_out_train_test_sets(X, y, vowel = 'ɛ', n = None):
-    vowel_indices = make_vowel_indices_dict(n = n)
+def make_leave_one_out_train_test_sets(X, y, vowel = 'ɛ'):
+    vowel_indices = make_vowel_indices_dict()
     leave_one_out_indices = vowel_indices[vowel]
     train_indices = [i for i in range(len(X)) if i not in leave_one_out_indices]
     X_train = X[train_indices]
@@ -53,10 +60,10 @@ def make_leave_one_out_train_test_sets(X, y, vowel = 'ɛ', n = None):
         info = stress_info.Info(dataset_name = 'mald_all')
         dataset = info.xy(layer = layer, section = 'vowel')
 
-def train_mlp_classifier(X,y, vowel, n = None, leave_one_in = False):
+def train_mlp_classifier(X,y, vowel, leave_one_in = False):
     if leave_one_in: function = make_leave_one_in_train_test_sets
     else: function = make_leave_one_out_train_test_sets
-    X_train, X_test, y_train, y_test = function(X,y, vowel, n = n) 
+    X_train, X_test, y_train, y_test = function(X,y, vowel) 
     clf=MLPClassifier(random_state=1,max_iter=300)
     clf.fit(X_train, y_train)
     hyp = clf.predict(X_test)
@@ -71,7 +78,7 @@ def train_classifiers(stress_info = None, layers = layers,
         X, y = stress_info.xy(layer = layer, section = 'vowel')
         for vowel in mald_vowels:
             print('training', layer, vowel)
-            f = _make_perceptron_filename(layer, vowel, leave_one_in = False)
+            f = _make_perceptron_filename(layer, vowel, leave_one_in)
             if os.path.exists(f) and not overwrite: 
                 print('file exists, skipping', f)
                 continue
