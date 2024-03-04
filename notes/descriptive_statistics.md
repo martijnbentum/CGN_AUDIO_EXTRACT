@@ -3,7 +3,7 @@
 
 total duration 795 hours of Netherlandic & Flemish Dutch speech
 
-see also: https://ivdnt.org/images/stories/producten/documentatie/cgn_website/doc_English/topics/index.htm
+see also: https://taalmaterialen.ivdnt.org/wp-content/uploads/documentatie/cgn_website/doc_Dutch/topics/index.htm
 
 (h) = hour <br>
 (s) = second <br> 
