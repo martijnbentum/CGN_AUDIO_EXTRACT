@@ -353,7 +353,7 @@ def plot_all_word_scores():
 def _stringify_keys(d):
     output = {}
     for key, value in d.items():
-        output[str(map(str,key))] = value
+        output['-'.join(key)] = value
     return output
     
 
