@@ -270,6 +270,7 @@ def _add_errorbars(sno, so, section, add_legend = False):
         legend = plt.legend()
 
 
+
 def plot_cnn_tf_comparison(name = 'comparison', section = 'vowel',
     add_errorbars = True, add_lines = True, aspect = 6, 
     add_all_words = False):
@@ -348,3 +349,18 @@ def plot_all_word_scores():
     add_errorbars_all_words(results)
     plt.show()
 
+
+def _stringify_keys(d):
+    output = {}
+    for key, value in d.items():
+        output[str(map(str,key))] = value
+    return output
+    
+
+def _save_cnn_tf_comparison():
+    sno= _stringify_keys(get_cnn_tf_scores('comparison', occlusion = False))
+    so= _stringify_keys(get_cnn_tf_scores('comparison', occlusion = True))
+    d = {'no oclussion':sno, 'occlusion':so}
+    with open(locations.ld_base + 'cnn_tf_comparison.json', 'w') as fout:
+        json.dump(d, fout)
+    return d
