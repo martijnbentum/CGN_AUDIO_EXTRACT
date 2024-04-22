@@ -6,7 +6,13 @@ root_dir = Path('/vol/tensusers/mbentum/mauser/cgn/')
 def make_transcription_files(component = 'k'):
     from text.models import Component
     k = Component.objects.get(name=component)
-    transcriptions_dir = root_dir / f'comp-{component}/transcriptions'
+    component_dir = root_dir / f'comp-{component}'
+    if not component_dir.exists(): component_dir.mkdir()
+    transcriptions_dir = component_dir / 'transcriptions'
+    if not transcriptions_dir.exists(): 
+        transcriptions_dir.mkdir()
+        textgrid_dir = component_dir / 'textgrids'
+        if not textgrid_dir.exists(): textgrid_dir.mkdir()
     d = {}
     for audio in k.audio_set.all():
         print(audio.duration, audio.filename)
