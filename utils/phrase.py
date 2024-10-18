@@ -9,7 +9,9 @@ def load_cgn():
     return d
 
 class CGN:
-    def __init__(self, save = False):
+    def __init__(self, save = False, max_duration = 15):
+        self.max_duration = max_duration
+        self.output_filename = f'../cgn_speakers_{max_duration}.json'
         self.speakers = Speaker.objects.all()
         self._make_speaker_phrases()
         if save: self.to_json
@@ -18,7 +20,7 @@ class CGN:
         self.d = {}
         self.errors = []
         for speaker in progressbar(self.speakers):
-            sp = SpeakerPhrases(speaker)
+            sp = SpeakerPhrases(speaker, self.max_duration)
             d = sp.to_dict
             if d == None: self.errors.append(sp)
             else:self.d[speaker.speaker_id] = sp.to_dict
@@ -29,13 +31,14 @@ class CGN:
 
     @property
     def to_json(self):
-        with open('../cgn.json','w') as f:
+        with open(self.output_filename,'w') as f:
             json.dump(self.d,f)
 
 
 class SpeakerPhrases:
-    def __init__(self, speaker):
+    def __init__(self, speaker, max_duration = 15):
         self.speaker= speaker
+        self.max_duration = max_duration
         self.speaker_id = speaker.speaker_id
         self.textgrids = speaker.textgrid_set.all()
         self._make_phrases()
@@ -47,7 +50,7 @@ class SpeakerPhrases:
 
     def _handle_textgrid(self, textgrid):
         d = textgrid.speaker_to_phrases_dict(end_on_eos = False, 
-            maximum_duration = 15)
+            maximum_duration = self.max_duration)
         phrases = d[self.speaker_id]
         for phrase in phrases:
             self.phrases.append(Phrase(phrase))
